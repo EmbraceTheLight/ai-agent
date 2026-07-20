@@ -1,0 +1,121 @@
+# =========================
+# Go 构建产物
+# =========================
+
+# 可执行文件
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go 测试生成的二进制文件
+*.test
+
+# Go 性能分析文件
+*.prof
+*.pprof
+
+# 覆盖率文件
+*.out
+coverage.*
+coverage/
+
+# 常见构建输出目录
+bin/
+build/
+dist/
+out/
+
+# =========================
+# Go 工作区
+# =========================
+
+# go.work 通常是开发者本地工作区配置
+go.work
+go.work.sum
+
+# =========================
+# GoLand / IntelliJ IDEA
+# =========================
+
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# =========================
+# Visual Studio Code
+# =========================
+
+.vscode/
+
+# =========================
+# 操作系统生成文件
+# =========================
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# =========================
+# 日志和临时文件
+# =========================
+
+*.log
+logs/
+log/
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+
+tmp/
+temp/
+.cache/
+
+# =========================
+# 本地配置和敏感信息
+# =========================
+
+.env
+.env.*
+!.env.example
+
+*.local
+config.local.*
+application-local.*
+
+# 密钥和证书
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+
+# =========================
+# 运行时文件
+# =========================
+
+*.pid
+*.pid.lock
+
+# =========================
+# 第三方依赖
+# =========================
+
+# 是否忽略 vendor 取决于项目管理方式
+# vendor/
