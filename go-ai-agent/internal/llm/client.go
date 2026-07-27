@@ -9,6 +9,7 @@ import (
 
 type Client interface {
 	Generate(ctx context.Context, messages []Message) (string, error)
+	GenerateWithJsonSchema(ctx context.Context, messages []Message) (string, error)
 	Stream(ctx context.Context, messages []Message, onDelta func(string)) error
 }
 

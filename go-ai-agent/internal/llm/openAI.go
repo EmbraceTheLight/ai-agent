@@ -49,6 +49,62 @@ func (o *openAIClient) Stream(ctx context.Context, messages []Message, onDelta f
 	return stream.Err()
 }
 
+func (o *openAIClient) GenerateWithJsonSchema(ctx context.Context, messages []Message) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.RequestTimeout)
+	defer cancel()
+	instruction, userMsg := handleMessages(messages)
+	resp, err := o.client.Responses.New(
+		ctx,
+		responses.ResponseNewParams{
+			Instructions: param.NewOpt[string](instruction),
+			Input:        responses.ResponseNewParamsInputUnion{OfString: openai.String(userMsg)},
+			Model:        o.model,
+			Text: responses.ResponseTextConfigParam{
+				Verbosity: responses.ResponseTextConfigVerbosityMedium,
+				Format: responses.ResponseFormatTextConfigUnionParam{
+					OfJSONSchema: &responses.ResponseFormatTextJSONSchemaConfigParam{
+						Name:   "IntentResult",
+						Strict: openai.Bool(true),
+						Schema: map[string]any{
+							"type": "object",
+							"properties": map[string]any{
+								"intent": map[string]any{
+									"type":        "string",
+									"description": "用户意图",
+									"enum": []string{
+										config.AgentQuestion,
+										config.RagQuestion,
+										config.ToolQuestion,
+										config.GeneralQuestion,
+									},
+								},
+								"answer": map[string]any{
+									"type":        "string",
+									"description": "回答",
+								},
+								"confidence": map[string]any{
+									"type":        "number",
+									"description": "置信度",
+									"minimum":     0,
+									"maximum":     1,
+								},
+							},
+							"required":             []string{"intent", "answer", "confidence"},
+							"additionalProperties": openai.Bool(false),
+						},
+						Description: openai.String("json 格式的回答, 包含 rag_question, tool_question, agent_question, general_question 这四种分类"),
+					},
+				},
+			},
+		},
+		option.WithRequestTimeout(config.RetryTimeout),
+	)
+	if err != nil {
+		return "", err
+	}
+	return resp.OutputText(), nil
+}
+
 func handleMessages(messages []Message) (systemMessage, userMessage string) {
 	var instructionsBuild strings.Builder
 	var userMessageBuild strings.Builder
