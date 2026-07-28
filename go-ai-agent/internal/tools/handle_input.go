@@ -11,7 +11,7 @@ func ReadInputString() (string, error) {
 	var str string
 	scan := bufio.NewScanner(os.Stdin)
 	if !scan.Scan() {
-		return "", fmt.Errorf("读取输入时发生错误: %w", scan.Err())
+		return "", fmt.Errorf("读取输入时发生错误: %v", scan.Err())
 	}
 	str = scan.Text()
 	return str, nil
