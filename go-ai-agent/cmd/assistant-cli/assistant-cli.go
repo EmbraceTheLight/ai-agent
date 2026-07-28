@@ -14,7 +14,8 @@ func main() {
 	if flags.JSON == true && flags.Stream == true {
 		panic("json 和 stream 不能同时为 true")
 	}
-	client := llm.NewOpenAIClient(config.OpenaiApiKey, config.OpenaiBaseURL, config.OpenaiModel)
+
+	client := llm.NewOpenAIClient(config.OpenaiApiKey, config.OpenaiBaseURL, flags.Model)
 	messages := make([]llm.Message, 0)
 	messages = append(messages, []llm.Message{
 		llm.GetSystemMessage(flags.Instruction),
@@ -22,9 +23,15 @@ func main() {
 	}...,
 	)
 
+	ctx := context.Background()
+	var cancel func()
+	if flags.TimeOut != 0 {
+		ctx, cancel = context.WithTimeout(ctx, flags.TimeOut)
+		defer cancel()
+	}
 	switch {
 	case flags.JSON: // 要求以 json 格式输出
-		ret, err := client.GenerateWithJsonSchema(context.TODO(), messages)
+		ret, err := client.GenerateWithJsonSchema(ctx, messages)
 		if err != nil {
 			panic(err)
 		}
@@ -44,14 +51,14 @@ func main() {
 		log.Printf("整个 ans 结构: %+v", ans)
 
 	case flags.Stream: // 要求流式输出
-		err := client.Stream(context.TODO(), messages, func(delta string) {
+		err := client.Stream(ctx, messages, func(delta string) {
 			fmt.Print(delta)
 		})
 		if err != nil {
 			panic(err)
 		}
 	default: // 要求普通输出
-		output, err := client.Generate(context.TODO(), messages)
+		output, err := client.Generate(ctx, messages)
 		if err != nil {
 			panic(err)
 		}

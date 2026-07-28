@@ -8,6 +8,7 @@ import (
 	"github.com/openai/openai-go/v3/packages/param"
 	"github.com/openai/openai-go/v3/responses"
 	"go-ai-agent/internal/config"
+	"go-ai-agent/internal/tools"
 	"strings"
 )
 
@@ -17,8 +18,10 @@ type openAIClient struct {
 }
 
 func (o *openAIClient) Generate(ctx context.Context, messages []Message) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, config.RequestTimeout)
-	defer cancel()
+	ctx, cancel := tools.GetContextWithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
 	instruction, userMsg := handleMessages(messages)
 	resp, err := o.client.Responses.New(
 		ctx,
@@ -36,6 +39,10 @@ func (o *openAIClient) Generate(ctx context.Context, messages []Message) (string
 }
 
 func (o *openAIClient) Stream(ctx context.Context, messages []Message, onDelta func(string)) error {
+	ctx, cancel := tools.GetContextWithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
 	instruction, userMsg := handleMessages(messages)
 	stream := o.client.Responses.NewStreaming(ctx, responses.ResponseNewParams{
 		Instructions: param.NewOpt[string](instruction),
@@ -50,8 +57,10 @@ func (o *openAIClient) Stream(ctx context.Context, messages []Message, onDelta f
 }
 
 func (o *openAIClient) GenerateWithJsonSchema(ctx context.Context, messages []Message) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, config.RequestTimeout)
-	defer cancel()
+	ctx, cancel := tools.GetContextWithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
 	instruction, userMsg := handleMessages(messages)
 	resp, err := o.client.Responses.New(
 		ctx,
@@ -130,6 +139,9 @@ func NewOpenAIClient(apiKey, baseURL, model string) Client {
 	}
 	if baseURL != "" {
 		opts = append(opts, option.WithBaseURL(baseURL))
+	}
+	if model == "" {
+		model = config.OpenaiModel
 	}
 	client := openai.NewClient(opts...)
 	return &openAIClient{
