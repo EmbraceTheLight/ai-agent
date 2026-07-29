@@ -8,7 +8,7 @@ import (
 	"github.com/openai/openai-go/v3/packages/param"
 	"github.com/openai/openai-go/v3/responses"
 	"go-ai-agent/internal/config"
-	"go-ai-agent/internal/tools"
+	"go-ai-agent/internal/utils"
 	"strings"
 )
 
@@ -18,7 +18,7 @@ type openAIClient struct {
 }
 
 func (o *openAIClient) Generate(ctx context.Context, messages []Message) (string, error) {
-	ctx, cancel := tools.GetContextWithTimeout(ctx)
+	ctx, cancel := utils.GetContextWithTimeout(ctx)
 	if cancel != nil {
 		defer cancel()
 	}
@@ -39,7 +39,7 @@ func (o *openAIClient) Generate(ctx context.Context, messages []Message) (string
 }
 
 func (o *openAIClient) Stream(ctx context.Context, messages []Message, onDelta func(string)) error {
-	ctx, cancel := tools.GetContextWithTimeout(ctx)
+	ctx, cancel := utils.GetContextWithTimeout(ctx)
 	if cancel != nil {
 		defer cancel()
 	}
@@ -57,7 +57,7 @@ func (o *openAIClient) Stream(ctx context.Context, messages []Message, onDelta f
 }
 
 func (o *openAIClient) GenerateWithJsonSchema(ctx context.Context, messages []Message) (string, error) {
-	ctx, cancel := tools.GetContextWithTimeout(ctx)
+	ctx, cancel := utils.GetContextWithTimeout(ctx)
 	if cancel != nil {
 		defer cancel()
 	}

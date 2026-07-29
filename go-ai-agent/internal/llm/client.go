@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go-ai-agent/internal/config"
-	"go-ai-agent/internal/tools"
+	"go-ai-agent/internal/utils"
 )
 
 type Client interface {
@@ -47,7 +47,7 @@ func readMessage(messageType int, msg ...string) (Message, error) {
 		return Message{Role: messageType, Content: question}, nil
 	}
 
-	question, err := tools.ReadInputString()
+	question, err := utils.ReadInputString()
 	if err != nil {
 		return Message{}, err
 	}
