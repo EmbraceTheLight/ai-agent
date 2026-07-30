@@ -48,6 +48,7 @@ internal/
   tools/
     registry.go
     types.go
+    executor.go
     time.go
     calculator.go
     http_get.go
@@ -190,6 +191,7 @@ get_current_time
 - 支持固定时间格式，例如 RFC3339。
 - 给无效 timezone 返回清晰错误。
 - 给工具执行加 context timeout。
+- 设计一个很薄的工具 executor 草图，先明确它负责：查找工具、解析参数、设置 timeout、调用执行函数、统一返回错误。
 
 ### 今日记录
 
@@ -197,6 +199,7 @@ get_current_time
 周二完成：
 工具定义包含哪些部分：
 时间工具有哪些边界：
+executor 应该负责哪些通用逻辑：
 ```
 
 ## 周三：写 calculator 工具
@@ -246,6 +249,10 @@ divide
 - 参数类型错误。
 - 除以 0。
 
+5. 如果周二已经设计了 executor，可以尝试让 `calculator` 也通过同一个 executor 执行。
+
+此时 executor 只需要保持很薄，不需要接入模型，也不需要处理完整 Agent Loop。它的目标是让不同工具共享同一套执行边界。
+
 ### 今日验收
 
 工具能够正确处理：
@@ -267,6 +274,7 @@ divide
 - 用 `encoding/json` 解析工具参数。
 - 为 calculator 写一个小测试。
 - 返回结构化工具结果，而不是随意字符串。
+- 让 `get_current_time` 和 `calculator` 都能通过同一个 executor 被调用。
 
 ### 今日记录
 
@@ -377,9 +385,10 @@ http_get -> HTTP 工具
 ```text
 读取 tool name
 读取 arguments
-查找工具
-解析参数
-执行工具
+交给 executor
+executor 查找工具
+executor 解析参数
+executor 执行工具
 拿到工具结果
 回传模型
 生成最终回答
@@ -424,6 +433,7 @@ Go：执行计算工具
 - 支持两个以上工具。
 - 给每一步打印 trace。
 - 工具失败时让模型给出友好回答。
+- 将 timeout、参数解析失败、工具不存在等通用错误收口到 executor。
 
 ### 今日记录
 
