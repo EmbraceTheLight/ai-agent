@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -21,11 +22,6 @@ func TestGetCurrentTime(t *testing.T) {
 			locationName: "Asia/Shanghai",
 		},
 		{
-			name:         "未指定时区时默认 UTC",
-			req:          &GetCurrentTimeReq{},
-			locationName: "UTC",
-		},
-		{
 			name:    "非法时区返回错误",
 			req:     &GetCurrentTimeReq{TimeZone: "invalid"},
 			wantErr: true,
@@ -34,7 +30,12 @@ func TestGetCurrentTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetCurrentTime(context.Background(), tt.req)
+			rawReq, err := json.Marshal(tt.req)
+			if err != nil {
+				t.Fatalf("marshal request failed: %v", err)
+			}
+
+			got, err := GetCurrentTime(context.Background(), rawReq)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")

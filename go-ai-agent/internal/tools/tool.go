@@ -3,9 +3,17 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"github.com/openai/openai-go/v3/packages/param"
 	"go-ai-agent/internal/errno"
 	"go-ai-agent/internal/utils"
 )
+
+type ITool interface {
+	GetToolParameterJSONSchema() (jsonSchema map[string]any)
+	GetToolHandler() ToolFunc
+}
+
+type ToolFunc func(ctx context.Context, req json.RawMessage) (string, error)
 
 // Tool tool 完整定义
 type Tool struct {
@@ -13,7 +21,11 @@ type Tool struct {
 	Name string `json:"name"`
 
 	// Description tool 描述, 帮助模型判断什么时候调用该工具
-	Description string `json:"description"`
+	Description param.Opt[string] `json:"description"`
+
+	// Strict 严格模式. 确保函数调用遵循定义的函数模式. 推荐将其设置为 true
+	// 当 Strict 为 true 时, Parameter 参数中每个 object 的 additionalProperties 都必须设置为 false, 且其所有字段都必须标记为 required
+	Strict param.Opt[bool] `json:"strict"`
 
 	// Parameters tool 参数, json schema, 用于模型调用 tool 时, 约束参数结构
 	Parameters map[string]any `json:"parameters"`
@@ -21,7 +33,21 @@ type Tool struct {
 	Handler ToolFunc `json:"-"`
 }
 
-type ToolFunc func(ctx context.Context, req json.RawMessage) (string, error)
+// NewTool 返回一个 tool 定义. Tool.Strict 固定为 true
+func NewTool(name, description string, iTool ITool) *Tool {
+	return &Tool{
+		Name:        name,
+		Description: param.NewOpt[string](description),
+		Strict:      param.NewOpt[bool](true),
+		Parameters:  iTool.GetToolParameterJSONSchema(),
+		Handler:     iTool.GetToolHandler(),
+	}
+}
+
+func (t *Tool) validateRequest(req json.RawMessage) error {
+	// TODO: 验证实际请求 req 与 Tool.Parameter 中对请求的约束是否一致
+	return nil
+}
 
 // Executor 工具执行器, 包含工具注册, 工具查找, 工具执行功能
 type Executor struct {
@@ -29,9 +55,11 @@ type Executor struct {
 	toolMap map[string]*Tool
 }
 
-// GetToolFunc 获取工具函数
-func (e *Executor) GetToolFunc(name string) ToolFunc {
-	return e.toolMap[name].Handler
+// NewExecutor 初始化一个 Executor
+func NewExecutor() *Executor {
+	return &Executor{
+		toolMap: make(map[string]*Tool),
+	}
 }
 
 func (e *Executor) GetTool(name string) *Tool {
@@ -58,7 +86,10 @@ func (e *Executor) Execute(ctx context.Context, toolName string, req any) (strin
 		return "", errno.ErrToolNotFound.WithMsgf("工具 %s 未注册", toolName)
 	}
 	// TODO: 验证实际请求 req 与 Tool.Parameter 中对请求的约束是否一致
-
+	err = tool.validateRequest(jsonRequest)
+	if err != nil {
+		return "", err
+	}
 	ctx, cancel := utils.GetContextWithTimeout(ctx)
 	if cancel != nil {
 		defer cancel()
@@ -74,9 +105,4 @@ func (e *Executor) Execute(ctx context.Context, toolName string, req any) (strin
 // 目前接受 req 为 string
 func (e *Executor) normalizeRequest(req any) (json.RawMessage, error) {
 	return json.Marshal(req)
-}
-
-func (e *Executor) validateRequest(req json.RawMessage) error {
-	// TODO: 验证实际请求 req 与 Tool.Parameter 中对请求的约束是否一致
-	return nil
 }

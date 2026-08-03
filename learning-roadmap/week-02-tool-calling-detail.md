@@ -31,6 +31,19 @@ Go 程序负责校验参数、执行工具、处理错误、返回工具结果�
 - Go 侧必须做参数校验，不能完全信任模型。
 - Agent loop 必须有超时、最大调用次数和安全边界。
 
+## 本周待办事项
+
+- 在工具 executor 中预留 JSON Schema 参数校验入口。
+  - Executor 使用 `Tool.Parameters` 校验模型传入的 raw arguments。
+  - 这层校验只负责通用结构约束，例如字段是否存在、类型是否正确、枚举是否合法、是否包含额外字段。
+  - 具体工具的业务校验仍然放在各自的 `ToolFunc` / handler 中，例如 timezone 是否有效、除数是否为 0、URL 是否命中 allowlist。
+  - 第二周可以先保留 `validateArguments(schema, rawArgs)` 这类函数入口，后续再实现完整 JSON Schema validator。
+
+- 后续实现完整 JSON Schema validator 时，优先参考官方规范：
+  - JSON Schema 规范总入口：<https://json-schema.org/specification>
+  - JSON Schema Core：<https://json-schema.org/draft/2020-12/json-schema-core>
+  - JSON Schema Validation：<https://json-schema.org/draft/2020-12/json-schema-validation>
+
 ## 本周推荐目录
 
 可以在第 1 周项目结构上继续演进：
