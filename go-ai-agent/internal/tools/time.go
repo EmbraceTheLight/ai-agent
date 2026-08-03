@@ -47,7 +47,7 @@ func GetCurrentTime(ctx context.Context, jsonReq json.RawMessage) (string, error
 	var req GetCurrentTimeReq
 	err := json.Unmarshal(jsonReq, &req)
 	if err != nil {
-		return "", err
+		return "", errno.RequestInvalid.WithError(err)
 	}
 	location, err := time.LoadLocation(req.TimeZone)
 	if err != nil {
