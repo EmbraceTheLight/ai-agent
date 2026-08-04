@@ -44,6 +44,13 @@ Go 程序负责校验参数、执行工具、处理错误、返回工具结果�
   - JSON Schema Core：<https://json-schema.org/draft/2020-12/json-schema-core>
   - JSON Schema Validation：<https://json-schema.org/draft/2020-12/json-schema-validation>
 
+- 有时间时阅读类似实现的 Go 框架源码，重点观察工具定义、参数 schema、executor、handler、agent loop 的边界：
+  - CloudWeGo Eino：<https://github.com/cloudwego/eino>
+  - Firebase Genkit Go：<https://github.com/firebase/genkit>
+  - LangChainGo：<https://github.com/tmc/langchaingo>
+  - nlpodyssey/openai-agents-go：<https://github.com/nlpodyssey/openai-agents-go>
+  - Microsoft Agent Framework Go：<https://github.com/microsoft/agent-framework-go>
+
 ## 本周推荐目录
 
 可以在第 1 周项目结构上继续演进：

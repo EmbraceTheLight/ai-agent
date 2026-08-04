@@ -560,6 +560,32 @@ create_ticket
 
 除非目标从 Go 后端 / AI 应用工程转向算法工程师或大模型基础设施岗位。
 
+## 拓展学习：Go Agent 框架源码阅读
+
+框架学习不作为前 8 周的主线任务。前期优先自己实现最小闭环，理解 LLM Client、Tool Registry、Executor、Agent Loop、RAG、MCP 的基本边界。等核心流程跑通后，再阅读成熟框架源码，重点比较它们如何组织工具定义、参数 schema、executor、handler、agent loop 和安全边界。
+
+建议优先阅读：
+
+- CloudWeGo Eino：<https://github.com/cloudwego/eino>
+- Firebase Genkit Go：<https://github.com/firebase/genkit>
+- LangChainGo：<https://github.com/tmc/langchaingo>
+- nlpodyssey/openai-agents-go：<https://github.com/nlpodyssey/openai-agents-go>
+- Microsoft Agent Framework Go：<https://github.com/microsoft/agent-framework-go>
+
+阅读重点：
+
+- 工具定义如何表达 `name`、`description`、`parameters schema`。
+- executor 是否在调用 handler 前做通用参数校验。
+- schema 校验和业务校验如何分层。
+- tool call loop 如何处理工具不存在、参数错误、工具超时和最大调用次数。
+- 框架如何把模型返回的 tool call 转换成 Go 侧函数调用。
+
+推荐时间：
+
+- 第 2 周可以只记录这些项目，不急着看源码。
+- 第 5 周实现 Agent Loop 后，再回头对比 Eino 和 LangChainGo。
+- 第 7-8 周准备作品集和面试表达时，再整理框架设计对比。
+
 ## 每周复盘模板
 
 每个周日建议写一次复盘：
