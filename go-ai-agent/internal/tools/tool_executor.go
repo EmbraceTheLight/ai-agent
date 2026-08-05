@@ -79,8 +79,31 @@ func (e *Executor) Execute(ctx context.Context, toolName string, req any) (strin
 	return res, nil
 }
 
+// GetToolList 获取当前 Executor 中注册的所有工具
+func (e *Executor) GetToolList() []*Tool {
+	ret := make([]*Tool, 0, len(e.toolMap))
+	for _, v := range e.toolMap {
+		ret = append(ret, v)
+	}
+	return ret
+}
+
 // normalizeRequest 将请求参数转换为 ToolFunc 接收的 json.RawMessage 格式
-// 目前接受 req 为 string
+// 如果传入的 req 已经是 JSON 格式, 则不再二次序列化
 func (e *Executor) normalizeRequest(req any) (json.RawMessage, error) {
-	return json.Marshal(req)
+	var obj map[string]any
+	switch raw := req.(type) {
+	case []byte:
+		if err := json.Unmarshal(raw, &obj); err == nil && json.Valid(raw) == true {
+			return json.RawMessage(raw), nil
+		}
+		return json.Marshal(raw)
+	case string:
+		if err := json.Unmarshal([]byte(raw), &obj); err == nil && json.Valid([]byte(raw)) == true {
+			return json.RawMessage(raw), nil
+		}
+		return json.Marshal(raw)
+	default:
+		return json.Marshal(raw)
+	}
 }
