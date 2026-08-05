@@ -9,6 +9,7 @@ import (
 
 func TestGetCurrentTime(t *testing.T) {
 	const layout = "2006-01-02 15:04:05"
+	handler := NewTimeTool("time", "获取当前时间, 支持指定时区").GetToolHandler()
 
 	tests := []struct {
 		name         string
@@ -35,7 +36,7 @@ func TestGetCurrentTime(t *testing.T) {
 				t.Fatalf("marshal request failed: %v", err)
 			}
 
-			got, err := GetCurrentTime(context.Background(), rawReq)
+			got, err := handler(context.Background(), rawReq)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")

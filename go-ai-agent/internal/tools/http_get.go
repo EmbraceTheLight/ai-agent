@@ -12,6 +12,8 @@ import (
 )
 
 type httpGetTool struct {
+	ToolTemplate
+
 	// 允许访问的域名列表
 	allowURLList map[string]bool
 
@@ -22,8 +24,9 @@ type httpGetTool struct {
 	respLimit int64
 }
 
-func NewHttpGetTool() ITool {
+func NewHttpGetTool(name, description string) ITool {
 	return &httpGetTool{
+		ToolTemplate:    NewTemplate(name, description),
 		allowURLList:    defaultAllowURLList(),
 		allowMethodList: defaultAllowMethodList(),
 		respLimit:       1024 * 1024, // 1MB

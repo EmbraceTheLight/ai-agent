@@ -9,17 +9,17 @@ import (
 )
 
 type timeTool struct {
-	Func ToolFunc
+	ToolTemplate
 }
 
-func NewTimeTool() ITool {
+func NewTimeTool(name, description string) ITool {
 	return &timeTool{
-		Func: GetCurrentTime,
+		ToolTemplate: NewTemplate(name, description),
 	}
 }
 
 // GetToolParameterJSONSchema 获取 GetCurrentTime Tool 的参数 json schema
-func (time *timeTool) GetToolParameterJSONSchema() map[string]any {
+func (t *timeTool) GetToolParameterJSONSchema() map[string]any {
 	return map[string]any{
 		"type": "object",
 		"properties": map[string]any{
@@ -33,8 +33,8 @@ func (time *timeTool) GetToolParameterJSONSchema() map[string]any {
 	}
 }
 
-func (time *timeTool) GetToolHandler() ToolFunc {
-	return time.Func
+func (t *timeTool) GetToolHandler() ToolFunc {
+	return t.GetCurrentTime
 }
 
 type GetCurrentTimeReq struct {
@@ -43,7 +43,7 @@ type GetCurrentTimeReq struct {
 
 // GetCurrentTime 获取当前时间.
 // 支持指定时区.
-func GetCurrentTime(ctx context.Context, jsonReq json.RawMessage) (string, error) {
+func (t *timeTool) GetCurrentTime(ctx context.Context, jsonReq json.RawMessage) (string, error) {
 	var req GetCurrentTimeReq
 	err := json.Unmarshal(jsonReq, &req)
 	if err != nil {

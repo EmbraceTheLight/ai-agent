@@ -5,6 +5,7 @@ import "time"
 const (
 	RequestTimeout = 5 * time.Minute
 	RetryTimeout   = 30 * time.Second
+	MaxSteps       = 3 // 最大工具调用次数
 )
 
 const (

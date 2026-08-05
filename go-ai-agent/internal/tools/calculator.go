@@ -8,12 +8,12 @@ import (
 )
 
 type calculatorTool struct {
-	Func ToolFunc
+	ToolTemplate
 }
 
-func NewCalculatorTool() ITool {
+func NewCalculatorTool(name, description string) ITool {
 	return &calculatorTool{
-		Func: Calculate,
+		ToolTemplate: NewTemplate(name, description),
 	}
 }
 
@@ -42,7 +42,7 @@ func (calculator *calculatorTool) GetToolParameterJSONSchema() map[string]any {
 }
 
 func (calculator *calculatorTool) GetToolHandler() ToolFunc {
-	return calculator.Func
+	return calculator.Calculate
 }
 
 type CalculateReq struct {
@@ -53,7 +53,7 @@ type CalculateReq struct {
 
 // Calculate 数学运算.
 // 支持加减乘除四则基础运算.
-func Calculate(ctx context.Context, jsonReq json.RawMessage) (string, error) {
+func (calculator *calculatorTool) Calculate(ctx context.Context, jsonReq json.RawMessage) (string, error) {
 	var req CalculateReq
 	err := json.Unmarshal(jsonReq, &req)
 	if err != nil {

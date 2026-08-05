@@ -9,6 +9,8 @@ import (
 )
 
 func TestCalculatorTime(t *testing.T) {
+	handler := NewCalculatorTool("calculator", "计算器, 支持加, 减, 乘, 除").GetToolHandler()
+
 	tests := []struct {
 		name    string
 		req     *CalculateReq
@@ -88,7 +90,7 @@ func TestCalculatorTime(t *testing.T) {
 				}
 			}
 
-			got, err := Calculate(context.Background(), rawReq)
+			got, err := handler(context.Background(), rawReq)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
