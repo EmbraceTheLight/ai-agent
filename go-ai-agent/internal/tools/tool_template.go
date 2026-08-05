@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"github.com/openai/openai-go/v3/packages/param"
 )
 
 type ITool interface {
@@ -43,11 +42,11 @@ type Tool struct {
 	Name string `json:"name"`
 
 	// Description tool 描述, 帮助模型判断什么时候调用该工具
-	Description param.Opt[string] `json:"description"`
+	Description string `json:"description"`
 
 	// Strict 严格模式. 确保函数调用遵循定义的函数模式. 推荐将其设置为 true
 	// 当 Strict 为 true 时, Parameter 参数中每个 object 的 additionalProperties 都必须设置为 false, 且其所有字段都必须标记为 required
-	Strict param.Opt[bool] `json:"strict"`
+	Strict bool `json:"strict"`
 
 	// Parameters tool 参数, json schema, 用于模型调用 tool 时, 约束参数结构
 	Parameters map[string]any `json:"parameters"`
@@ -59,11 +58,15 @@ type Tool struct {
 func NewTool(iTool ITool) *Tool {
 	return &Tool{
 		Name:        iTool.GetToolName(),
-		Description: param.NewOpt[string](iTool.GetToolDescription()),
-		Strict:      param.NewOpt[bool](true),
+		Description: iTool.GetToolDescription(),
+		Strict:      true,
 		Parameters:  iTool.GetToolParameterJSONSchema(),
 		Handler:     iTool.GetToolHandler(),
 	}
+}
+
+func (t *Tool) Detail() {
+
 }
 
 func (t *Tool) validateRequest(req json.RawMessage) error {

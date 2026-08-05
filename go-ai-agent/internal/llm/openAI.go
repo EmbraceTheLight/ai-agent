@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
-	"github.com/openai/openai-go/v3/packages/param"
 	"github.com/openai/openai-go/v3/responses"
 	"go-ai-agent/internal/config"
+	"go-ai-agent/internal/tools"
 	"go-ai-agent/internal/utils"
 	"strings"
 )
@@ -15,6 +15,24 @@ import (
 type openAIClient struct {
 	model  string
 	client openai.Client
+}
+
+func NewOpenAIClient(apiKey, baseURL, model string) Client {
+	opts := make([]option.RequestOption, 0)
+	if apiKey != "" {
+		opts = append(opts, option.WithAPIKey(apiKey))
+	}
+	if baseURL != "" {
+		opts = append(opts, option.WithBaseURL(baseURL))
+	}
+	if model == "" {
+		model = config.OpenaiModel
+	}
+	client := openai.NewClient(opts...)
+	return &openAIClient{
+		model:  model,
+		client: client,
+	}
 }
 
 func (o *openAIClient) Generate(ctx context.Context, messages []Message) (string, error) {
@@ -26,7 +44,7 @@ func (o *openAIClient) Generate(ctx context.Context, messages []Message) (string
 	resp, err := o.client.Responses.New(
 		ctx,
 		responses.ResponseNewParams{
-			Instructions: param.NewOpt[string](instruction),
+			Instructions: openai.String(instruction),
 			Input:        responses.ResponseNewParamsInputUnion{OfString: openai.String(userMsg)},
 			Model:        o.model,
 		},
@@ -45,7 +63,7 @@ func (o *openAIClient) Stream(ctx context.Context, messages []Message, onDelta f
 	}
 	instruction, userMsg := handleMessages(messages)
 	stream := o.client.Responses.NewStreaming(ctx, responses.ResponseNewParams{
-		Instructions: param.NewOpt[string](instruction),
+		Instructions: openai.String(instruction),
 		Input:        responses.ResponseNewParamsInputUnion{OfString: openai.String(userMsg)},
 		Model:        o.model,
 	})
@@ -65,7 +83,7 @@ func (o *openAIClient) GenerateWithJsonSchema(ctx context.Context, messages []Me
 	resp, err := o.client.Responses.New(
 		ctx,
 		responses.ResponseNewParams{
-			Instructions: param.NewOpt[string](instruction),
+			Instructions: openai.String(instruction),
 			Input:        responses.ResponseNewParamsInputUnion{OfString: openai.String(userMsg)},
 			Model:        o.model,
 			Text: responses.ResponseTextConfigParam{
@@ -114,6 +132,62 @@ func (o *openAIClient) GenerateWithJsonSchema(ctx context.Context, messages []Me
 	return resp.OutputText(), nil
 }
 
+func (o *openAIClient) FunctionCall(ctx context.Context, messages []Message, e *tools.Executor) (string, error) {
+	ctx, cancel := utils.GetContextWithTimeout(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+	instruction, userMsg := handleMessages(messages)
+	resp, err := o.client.Responses.New(ctx, responses.ResponseNewParams{
+		Instructions: openai.String(instruction),
+		Input:        responses.ResponseNewParamsInputUnion{OfString: openai.String(userMsg)},
+		Tools:        toolsToToolParam(e.GetToolList()),
+		Model:        o.model,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	var output string
+	for _, item := range resp.Output {
+		if item.Type == "function_call" {
+			toolCall := item.AsFunctionCall()
+			toolResp, err := e.Execute(ctx, toolCall.Name, toolCall.Arguments)
+			if err != nil {
+				return "", err
+			}
+			fmt.Printf("tool %s Resp: %v\n", toolCall.Name, toolResp)
+			resp, err = o.client.Responses.New(
+				ctx,
+				responses.ResponseNewParams{
+					Instructions:       openai.String(instruction),
+					PreviousResponseID: openai.String(resp.PreviousResponseID),
+					Input: responses.ResponseNewParamsInputUnion{
+						OfInputItemList: []responses.ResponseInputItemUnionParam{
+							{
+								OfFunctionCallOutput: &responses.ResponseInputItemFunctionCallOutputParam{
+									CallID: toolCall.CallID,
+									Output: responses.ResponseInputItemFunctionCallOutputOutputUnionParam{
+										OfString: openai.String(toolResp),
+									},
+								},
+							},
+						},
+					},
+					Model: o.model,
+				},
+				option.WithRequestTimeout(config.RetryTimeout),
+			)
+			if err != nil {
+				return "", err
+			}
+			output = resp.OutputText()
+			break
+		}
+	}
+	return output, nil
+}
+
 func handleMessages(messages []Message) (systemMessage, userMessage string) {
 	var instructionsBuild strings.Builder
 	var userMessageBuild strings.Builder
@@ -132,20 +206,18 @@ func handleMessages(messages []Message) (systemMessage, userMessage string) {
 	return instructionsBuild.String(), userMessageBuild.String()
 }
 
-func NewOpenAIClient(apiKey, baseURL, model string) Client {
-	opts := make([]option.RequestOption, 0)
-	if apiKey != "" {
-		opts = append(opts, option.WithAPIKey(apiKey))
+// toolsToToolParam 将 tools 信息转换为 openai 的 ToolParam 格式
+func toolsToToolParam(tools []*tools.Tool) []responses.ToolUnionParam {
+	toolParams := make([]responses.ToolUnionParam, 0, len(tools))
+	for _, t := range tools {
+		toolParam := responses.ToolUnionParam{
+			OfFunction: &responses.FunctionToolParam{
+				Name:        t.Name,
+				Strict:      openai.Bool(t.Strict),
+				Description: openai.String(t.Description),
+				Parameters:  t.Parameters,
+			}}
+		toolParams = append(toolParams, toolParam)
 	}
-	if baseURL != "" {
-		opts = append(opts, option.WithBaseURL(baseURL))
-	}
-	if model == "" {
-		model = config.OpenaiModel
-	}
-	client := openai.NewClient(opts...)
-	return &openAIClient{
-		model:  model,
-		client: client,
-	}
+	return toolParams
 }

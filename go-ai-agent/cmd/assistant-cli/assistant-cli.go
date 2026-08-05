@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go-ai-agent/internal/config"
 	"go-ai-agent/internal/llm"
+	"go-ai-agent/internal/tools"
 	"log"
 )
 
@@ -55,7 +56,13 @@ func main() {
 		}
 
 	case "function_call": // 要求调用工具
-
+		executor := tools.NewDefaultExecutor()
+		ret, err := client.FunctionCall(ctx, messages, executor)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("输出")
+		fmt.Println(ret)
 	case "standard": // 要求普通输出
 		output, err := client.Generate(ctx, messages)
 		if err != nil {

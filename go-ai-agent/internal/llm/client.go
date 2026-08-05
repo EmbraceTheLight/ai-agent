@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go-ai-agent/internal/config"
+	"go-ai-agent/internal/tools"
 	"go-ai-agent/internal/utils"
 )
 
@@ -11,6 +12,7 @@ type Client interface {
 	Generate(ctx context.Context, messages []Message) (string, error)
 	GenerateWithJsonSchema(ctx context.Context, messages []Message) (string, error)
 	Stream(ctx context.Context, messages []Message, onDelta func(string)) error
+	FunctionCall(ctx context.Context, messages []Message, e *tools.Executor) (string, error)
 }
 
 func GetSystemMessage(systemMsg ...string) Message {
