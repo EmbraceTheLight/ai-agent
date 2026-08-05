@@ -11,9 +11,6 @@ import (
 
 func main() {
 	flags, args := config.GetFlagConf()
-	if flags.JSON == true && flags.Stream == true {
-		panic("json 和 stream 不能同时为 true")
-	}
 
 	client := llm.NewOpenAIClient(config.OpenaiApiKey, config.OpenaiBaseURL, flags.Model)
 	messages := make([]llm.Message, 0)
@@ -29,8 +26,8 @@ func main() {
 		ctx, cancel = context.WithTimeout(ctx, flags.TimeOut)
 		defer cancel()
 	}
-	switch {
-	case flags.JSON: // 要求以 json 格式输出
+	switch flags.OutputType {
+	case "json": // 要求以 json 格式输出
 		ret, err := client.GenerateWithJsonSchema(ctx, messages)
 		if err != nil {
 			panic(err)
@@ -49,20 +46,25 @@ func main() {
 		fmt.Println("============================== 分界线 ==============================")
 		log.Printf("整个 ans 结构: %+v", ans)
 
-	case flags.Stream: // 要求流式输出
+	case "stream": // 要求流式输出
 		err := client.Stream(ctx, messages, func(delta string) {
 			fmt.Print(delta)
 		})
 		if err != nil {
 			panic(err)
 		}
-	default: // 要求普通输出
+
+	case "function_call": // 要求调用工具
+
+	case "standard": // 要求普通输出
 		output, err := client.Generate(ctx, messages)
 		if err != nil {
 			panic(err)
 		}
 		fmt.Println("输出")
 		fmt.Println(output)
+	default:
+		log.Fatalf("不支持的输出类型: %s", flags.OutputType)
 	}
 
 }

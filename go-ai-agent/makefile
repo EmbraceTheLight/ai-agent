@@ -4,11 +4,11 @@ run:
 
 .PHONY: stream
 stream:
-	go run ./cmd/assistant-cli --stream
+	go run ./cmd/assistant-cli --outputType stream
 
 .PHONY: json
 json:
-	go run ./cmd/assistant-cli --json
+	go run ./cmd/assistant-cli --outputType json
 
 .PHONY: test
 test:
