@@ -27,7 +27,7 @@ type Executor struct {
 	toolMap map[string]*Tool
 
 	// 最大调用次数
-	maxSteps int
+	MaxSteps int
 }
 
 // NewExecutor 初始化一个 Executor
@@ -36,7 +36,7 @@ type Executor struct {
 func NewExecutor(maxSteps int) *Executor {
 	return &Executor{
 		toolMap:  make(map[string]*Tool),
-		maxSteps: maxSteps,
+		MaxSteps: maxSteps,
 	}
 }
 

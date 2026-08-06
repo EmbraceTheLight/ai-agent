@@ -7,6 +7,7 @@ import (
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
 	"go-ai-agent/internal/config"
+	"go-ai-agent/internal/errno"
 	"go-ai-agent/internal/tools"
 	"go-ai-agent/internal/utils"
 	"strings"
@@ -139,53 +140,70 @@ func (o *openAIClient) FunctionCall(ctx context.Context, messages []Message, e *
 	}
 	instruction, userMsg := handleMessages(messages)
 	resp, err := o.client.Responses.New(ctx, responses.ResponseNewParams{
-		Instructions: openai.String(instruction),
-		Input:        responses.ResponseNewParamsInputUnion{OfString: openai.String(userMsg)},
-		Tools:        toolsToToolParam(e.GetToolList()),
-		Model:        o.model,
+		Instructions:      openai.String(instruction),
+		ParallelToolCalls: openai.Bool(false), // 不允许一次调用多个 Tool
+		Input:             responses.ResponseNewParamsInputUnion{OfString: openai.String(userMsg)},
+		Store:             openai.Bool(true),
+		Tools:             toolsToToolParam(e.GetToolList()),
+		Model:             o.model,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	var output string
-	for _, item := range resp.Output {
-		if item.Type == "function_call" {
-			toolCall := item.AsFunctionCall()
-			toolResp, err := e.Execute(ctx, toolCall.Name, toolCall.Arguments)
-			if err != nil {
-				return "", err
-			}
-			fmt.Printf("tool %s Resp: %v\n", toolCall.Name, toolResp)
-			resp, err = o.client.Responses.New(
-				ctx,
-				responses.ResponseNewParams{
-					Instructions:       openai.String(instruction),
-					PreviousResponseID: openai.String(resp.PreviousResponseID),
-					Input: responses.ResponseNewParamsInputUnion{
-						OfInputItemList: []responses.ResponseInputItemUnionParam{
-							{
-								OfFunctionCallOutput: &responses.ResponseInputItemFunctionCallOutputParam{
-									CallID: toolCall.CallID,
-									Output: responses.ResponseInputItemFunctionCallOutputOutputUnionParam{
-										OfString: openai.String(toolResp),
-									},
+	var toolCallCount int
+	var calledTools []string // 被调用的工具的名称 debug 使用
+	for toolCallCount = 0; toolCallCount < e.MaxSteps; toolCallCount++ {
+		toolCall, ok := functionCall(resp)
+		if ok == false {
+			break
+		}
+		toolResp, err := e.Execute(ctx, toolCall.Name, toolCall.Arguments)
+		if err != nil {
+			return "", err
+		}
+		calledTools = append(calledTools, toolCall.Name)
+		fmt.Printf("tool %s Resp: %v\n", toolCall.Name, toolResp)
+		resp, err = o.client.Responses.New(
+			ctx,
+			responses.ResponseNewParams{
+				Instructions:       openai.String(instruction),
+				ParallelToolCalls:  openai.Bool(false),     // 不允许一次调用多个 Tool
+				PreviousResponseID: openai.String(resp.ID), // 上个请求的 ID
+				Tools:              toolsToToolParam(e.GetToolList()),
+				Store:              openai.Bool(true),
+				Input: responses.ResponseNewParamsInputUnion{
+					OfInputItemList: []responses.ResponseInputItemUnionParam{
+						{
+							OfFunctionCallOutput: &responses.ResponseInputItemFunctionCallOutputParam{
+								CallID: toolCall.CallID,
+								Output: responses.ResponseInputItemFunctionCallOutputOutputUnionParam{
+									OfString: openai.String(toolResp),
 								},
 							},
 						},
 					},
-					Model: o.model,
 				},
-				option.WithRequestTimeout(config.RetryTimeout),
-			)
-			if err != nil {
-				return "", err
-			}
-			output = resp.OutputText()
-			break
+				Model: o.model,
+			},
+			option.WithRequestTimeout(config.RetryTimeout),
+		)
+		if err != nil {
+			return "", errno.RequestFailed.WithError(err)
 		}
 	}
-	return output, nil
+
+	fmt.Printf("工具被调用了 %d 次\n", toolCallCount)
+	// 检测 tool 调用次数超过限制 ---- tool 调用已达 e.MaxSteps, 且下次还希望请求调用 Tool
+	_, ok := functionCall(resp)
+	if toolCallCount == e.MaxSteps && ok == true {
+		return "", errno.ErrToolCallLimitExceed
+	}
+	if toolCallCount > 0 {
+		fmt.Println("被调用的工具:")
+		fmt.Println(calledTools)
+	}
+	return resp.OutputText(), nil
 }
 
 func handleMessages(messages []Message) (systemMessage, userMessage string) {
@@ -220,4 +238,16 @@ func toolsToToolParam(tools []*tools.Tool) []responses.ToolUnionParam {
 		toolParams = append(toolParams, toolParam)
 	}
 	return toolParams
+}
+
+// functionCall 解析模型返回的 resp.Output 的类型. 如果是 function_call, 说明模型希望调用 Tool, 返回 Tool 的调用信息
+// 入参: 模型回答 resp
+// 返回值: Tool 的调用信息, 是否是 function_call 类型
+func functionCall(resp *responses.Response) (functionCall responses.ResponseFunctionToolCall, ok bool) {
+	for _, item := range resp.Output {
+		if item.Type == "function_call" {
+			return item.AsFunctionCall(), true
+		}
+	}
+	return functionCall, false
 }
