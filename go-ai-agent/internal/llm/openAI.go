@@ -151,6 +151,10 @@ func (o *openAIClient) FunctionCall(ctx context.Context, messages []Message, e *
 		return "", err
 	}
 
+	var (
+		lastRespID string
+	)
+
 	var toolCallCount int
 	var calledTools []string // 被调用的工具的名称 debug 使用
 	for toolCallCount = 0; toolCallCount < e.MaxSteps; toolCallCount++ {
@@ -158,7 +162,11 @@ func (o *openAIClient) FunctionCall(ctx context.Context, messages []Message, e *
 		if ok == false {
 			break
 		}
+		lastRespID = resp.ID
+		fmt.Println("last RespID:", lastRespID)
 		toolResp, err := e.Execute(ctx, toolCall.Name, toolCall.Arguments)
+		newInput := responseOutputToInputParam(resp)
+		fmt.Println("newInput:", newInput)
 		if err != nil {
 			return "", err
 		}
@@ -168,21 +176,12 @@ func (o *openAIClient) FunctionCall(ctx context.Context, messages []Message, e *
 			ctx,
 			responses.ResponseNewParams{
 				Instructions:       openai.String(instruction),
-				ParallelToolCalls:  openai.Bool(false),     // 不允许一次调用多个 Tool
-				PreviousResponseID: openai.String(resp.ID), // 上个请求的 ID
+				ParallelToolCalls:  openai.Bool(false),        // 不允许一次调用多个 Tool
+				PreviousResponseID: openai.String(lastRespID), // 上个请求的 ID
 				Tools:              toolsToToolParam(e.GetToolList()),
 				Store:              openai.Bool(true),
 				Input: responses.ResponseNewParamsInputUnion{
-					OfInputItemList: []responses.ResponseInputItemUnionParam{
-						{
-							OfFunctionCallOutput: &responses.ResponseInputItemFunctionCallOutputParam{
-								CallID: toolCall.CallID,
-								Output: responses.ResponseInputItemFunctionCallOutputOutputUnionParam{
-									OfString: openai.String(toolResp),
-								},
-							},
-						},
-					},
+					OfInputItemList: newInput,
 				},
 				Model: o.model,
 			},
@@ -250,4 +249,30 @@ func functionCall(resp *responses.Response) (functionCall responses.ResponseFunc
 		}
 	}
 	return functionCall, false
+}
+
+func responseOutputToInputParam(resp *responses.Response) []responses.ResponseInputItemUnionParam {
+	var ret []responses.ResponseInputItemUnionParam
+	for _, item := range resp.Output {
+		switch item.Type {
+		case "function_call":
+			fCall := item.AsFunctionCall().ToParam()
+			ret = append(ret, responses.ResponseInputItemUnionParam{
+				OfFunctionCall: &fCall,
+			})
+		case "message":
+			message := item.AsMessage().ToParam()
+			ret = append(ret, responses.ResponseInputItemUnionParam{
+				OfOutputMessage: &message,
+			})
+		case "reasoning":
+			reasoning := item.AsReasoning().ToParam()
+			ret = append(ret, responses.ResponseInputItemUnionParam{
+				OfReasoning: &reasoning,
+			})
+		default:
+			fmt.Printf("暂未处理的 item 类型: %s\n", item.Type)
+		}
+	}
+	return ret
 }

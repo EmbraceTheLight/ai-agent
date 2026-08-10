@@ -57,5 +57,10 @@ func (t *timeTool) GetCurrentTime(ctx context.Context, jsonReq json.RawMessage) 
 	if cancel != nil {
 		defer cancel()
 	}
-	return time.Now().In(location).Format("2006-01-02 15:04:05"), nil
+	resp := map[string]string{
+		"time_zone":    req.TimeZone,
+		"current_time": time.Now().In(location).Format("2006-01-02 15:04:05"),
+	}
+	content, _ := json.Marshal(resp)
+	return string(content), nil
 }

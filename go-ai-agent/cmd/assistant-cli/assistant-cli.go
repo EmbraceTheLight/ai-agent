@@ -13,10 +13,10 @@ import (
 func main() {
 	flags, args := config.GetFlagConf()
 
-	client := llm.NewOpenAIClient(config.OpenaiApiKey, config.OpenaiBaseURL, flags.Model)
+	client := llm.NewGroqClient(config.OpenaiApiKey, config.OpenaiBaseURL, flags.Model)
 	messages := make([]llm.Message, 0)
 	messages = append(messages, []llm.Message{
-		llm.GetSystemMessage(flags.Instruction),
+		//llm.GetSystemMessage(flags.Instruction),
 		llm.GetUserMessage(args...),
 	}...,
 	)
