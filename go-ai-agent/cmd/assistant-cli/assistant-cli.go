@@ -13,6 +13,7 @@ import (
 func main() {
 	flags, args := config.GetFlagConf()
 
+	// 测试 Tool Calling 使用 Groq, 其他场景还是使用标准 openai 中转站
 	client := llm.NewGroqClient(config.OpenaiApiKey, config.OpenaiBaseURL, flags.Model)
 	messages := make([]llm.Message, 0)
 	messages = append(messages, []llm.Message{

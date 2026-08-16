@@ -1,6 +1,9 @@
 package errno
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 type Errno struct {
 	Code   int
@@ -9,6 +12,7 @@ type Errno struct {
 }
 
 func (err Errno) Error() string {
+	log.Println("err message:", err.ErrMsg)
 	return err.Msg
 }
 
