@@ -24,16 +24,16 @@ type EmbedResp struct {
 // vector 表示一个 embedding 向量。
 // 输入: 通常来自 embedding provider 返回的 `[]float64`。
 // 输出: 用于向量库保存和相似度计算。
-// 示例: `vector{0.1, 0.2, 0.3}`。
+// 示例: `Vector{0.1, 0.2, 0.3}`。
 type vector []float64
 
-// Embedding 存放 chunk 文本及其向量。
-// 输入: `Chunk` 是原始 chunk 文本, `vector` 是该文本对应的 embedding。
+// Embedding 存放 chunk 元数据及其向量。
+// 输入: `Chunk` 是包含来源文件、序号和内容的 chunk, `Vector` 是该 chunk 对应的 embedding。
 // 输出: 作为内存向量库中的一条记录。
-// 示例: `Embedding{Chunk: "RAG 文档问答", vector: vector{0.1, 0.2}}`。
+// 示例: `Embedding{Chunk: chunk, Vector: Vector{0.1, 0.2}}`。
 type Embedding struct {
-	Chunk  string
-	vector vector
+	Chunk  *Chunk
+	Vector vector
 }
 
 // Document 表示从本地文件加载得到的一篇文档。
