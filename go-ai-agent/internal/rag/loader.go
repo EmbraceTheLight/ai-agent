@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+// LoadRAGResources 从本地路径加载 RAG 文档资源。
+// 输入: `path` 可以是单个 `.md`/`.txt` 文件, 也可以是包含这些文件的目录。
+// 输出: 返回文档列表; 路径无效、没有支持文件或读取失败时返回错误。
+// 示例: `LoadRAGResources("testdata/documents")` -> 返回可用于 chunk 切分的 `[]*Document`。
 func LoadRAGResources(path string) ([]*Document, error) {
 	var documents []*Document
 	allowExt := map[string]bool{
@@ -30,9 +34,10 @@ func LoadRAGResources(path string) ([]*Document, error) {
 	return documents, nil
 }
 
-// getAllFile 获取 path 下所有扩展名位于 allowExt 中的文件路径
-// 输入: 要收集文件的路径, 一般为目录, 也可以是单个文件
-// 输出: 文件路径数组, 符合条件的文件数量, 错误信息
+// getAllFile 获取 path 下所有扩展名位于 allowExt 中的文件路径。
+// 输入: `root` 是待收集路径, 一般为目录, 也可以是单个文件; `allowExt` 是允许的扩展名集合。
+// 输出: 返回符合条件的绝对文件路径列表; 路径无效或没有符合条件的文件时返回错误。
+// 示例: `getAllFile("docs", map[string]bool{".md": true})` -> 返回 docs 下所有 markdown 文件。
 func getAllFile(root string, allowExt map[string]bool) ([]string, error) {
 	var (
 		filePaths []string // 符合条件的文件路径列表

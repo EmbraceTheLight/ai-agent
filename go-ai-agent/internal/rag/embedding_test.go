@@ -99,6 +99,10 @@ func TestEmbeddingClientReturnsHTTPError(t *testing.T) {
 	}
 }
 
+// collectChunkTexts 从文档列表中收集指定数量的 chunk 文本。
+// 输入: `docs` 是文档列表, `size` 和 `overlap` 是 chunk 参数, `limit` 是最多收集数量。
+// 输出: 返回非空 chunk 文本列表; 数量不足或切分失败时终止测试。
+// 示例: `collectChunkTexts(t, docs, 200, 40, 3)`。
 func collectChunkTexts(t *testing.T, docs []*Document, size, overlap, limit int) []string {
 	t.Helper()
 

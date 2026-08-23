@@ -1,7 +1,6 @@
 package rag
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +10,6 @@ import (
 // TestLoadRAGResourcesLoadsMarkdownAndTextRecursively 测试目录递归加载能力:
 // 只加载 .md/.txt 文件, 跳过不支持的扩展名, 并保留文件内容和绝对路径。
 func TestLoadRAGResourcesLoadsMarkdownAndTextRecursively(t *testing.T) {
-	fmt.Println(len("你好"))
 	root := t.TempDir()
 	subDir := filepath.Join(root, "notes")
 	if err := os.Mkdir(subDir, 0755); err != nil {

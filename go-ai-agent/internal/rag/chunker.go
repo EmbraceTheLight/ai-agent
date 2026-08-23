@@ -5,7 +5,10 @@ import (
 	"strings"
 )
 
-// Chunk 每块分块的数据, 包含元数据
+// Chunk 表示文档切分后的一个片段。
+// 输入: 来源文档内容经过 `ChunkDocument` 切分得到。
+// 输出: 保存 chunk 文本、来源文件、序号和 rune 偏移。
+// 示例: `Chunk{SourceFile: "notes/rag.md", ChunkIndex: 0, Content: "RAG"}`。
 type Chunk struct {
 	SourceFile string // 源文件路径
 	ChunkIndex int    // Chunk 索引
@@ -13,11 +16,15 @@ type Chunk struct {
 
 	// 分块起始偏移量, 该偏移量为形式上的偏移量, 并非按照字节偏移.
 	// 对于存在 rune 的文本, 该偏移量可能无法直接用于切片操作
-	// 如 "你好x", 其对应的 x 的 Start 偏移量就为 2, 而非
+	// 如 "你好x", 其对应的 x 的 Start 偏移量为 2, 而非字节偏移 6。
 	Start int
 	End   int // 分块终止偏移量
 }
 
+// ChunkDocument 按固定 rune 数量和 overlap 将文档切分为多个 chunk。
+// 输入: `doc` 是待切分文档, `size` 是每个 chunk 的最大 rune 数, `overlap` 是相邻 chunk 的重叠 rune 数。
+// 输出: 返回带来源和偏移信息的 chunk 列表; 参数非法时返回错误。
+// 示例: `ChunkDocument(doc, 500, 100)` -> 返回按 500 rune 切分且重叠 100 rune 的片段。
 func ChunkDocument(doc *Document, size, overlap int) ([]*Chunk, error) {
 	var chunks []*Chunk
 	if doc == nil {

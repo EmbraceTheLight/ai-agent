@@ -114,6 +114,10 @@ func TestChunkDocumentReturnsErrorForInvalidArguments(t *testing.T) {
 	}
 }
 
+// assertChunksEqual 对比实际 chunk 列表与期望 chunk 列表。
+// 输入: `got` 是实际结果, `want` 是期望结果。
+// 输出: 不匹配时通过 `t.Fatalf` 终止测试。
+// 示例: `assertChunksEqual(t, chunks, want)`。
 func assertChunksEqual(t *testing.T, got []*Chunk, want []Chunk) {
 	t.Helper()
 	if len(got) != len(want) {
