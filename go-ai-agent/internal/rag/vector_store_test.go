@@ -9,12 +9,12 @@ import (
 // 且结果按余弦相似度从高到低排序。
 func TestVectorStoreSearchReturnsTopKInDescendingScore(t *testing.T) {
 	store := NewVectorStore()
-	mustAddVector(t, store, vector{1, 0}, testChunk("notes/a.md", 0, "A exact match"))
-	mustAddVector(t, store, vector{0.8, 0.2}, testChunk("notes/b.md", 1, "B close match"))
-	mustAddVector(t, store, vector{0, 1}, testChunk("notes/c.md", 2, "C orthogonal"))
-	mustAddVector(t, store, vector{-1, 0}, testChunk("notes/d.md", 3, "D opposite"))
+	mustAddVector(t, store, Vector{1, 0}, testChunk("notes/a.md", 0, "A exact match"))
+	mustAddVector(t, store, Vector{0.8, 0.2}, testChunk("notes/b.md", 1, "B close match"))
+	mustAddVector(t, store, Vector{0, 1}, testChunk("notes/c.md", 2, "C orthogonal"))
+	mustAddVector(t, store, Vector{-1, 0}, testChunk("notes/d.md", 3, "D opposite"))
 
-	results, err := store.Search(vector{1, 0}, 2)
+	results, err := store.Search(Vector{1, 0}, 2)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -46,7 +46,7 @@ func TestVectorStoreSearchReturnsTopKInDescendingScore(t *testing.T) {
 // 避免后续相似度计算出现无效数据。
 func TestVectorStoreAddRejectsEmptyVector(t *testing.T) {
 	store := NewVectorStore()
-	if err := store.Add(vector{}, testChunk("notes/empty.md", 0, "empty vector")); err == nil {
+	if err := store.Add(Vector{}, testChunk("notes/empty.md", 0, "empty vector")); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -55,7 +55,7 @@ func TestVectorStoreAddRejectsEmptyVector(t *testing.T) {
 // 避免检索结果缺失来源文件和 chunk 序号等引用信息。
 func TestVectorStoreAddRejectsNilChunk(t *testing.T) {
 	store := NewVectorStore()
-	if err := store.Add(vector{1, 0}, nil); err == nil {
+	if err := store.Add(Vector{1, 0}, nil); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -64,7 +64,7 @@ func TestVectorStoreAddRejectsNilChunk(t *testing.T) {
 // Search 会返回错误而不是返回不明确的结果。
 func TestVectorStoreSearchReturnsErrorForInvalidTopK(t *testing.T) {
 	store := NewVectorStore()
-	mustAddVector(t, store, vector{1, 0}, testChunk("notes/a.md", 0, "A"))
+	mustAddVector(t, store, Vector{1, 0}, testChunk("notes/a.md", 0, "A"))
 
 	tests := []struct {
 		name string
@@ -77,7 +77,7 @@ func TestVectorStoreSearchReturnsErrorForInvalidTopK(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := store.Search(vector{1, 0}, tt.topK)
+			results, err := store.Search(Vector{1, 0}, tt.topK)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -93,13 +93,13 @@ func TestVectorStoreSearchReturnsErrorForInvalidTopK(t *testing.T) {
 func TestVectorStoreSearchReturnsErrorForInvalidVectors(t *testing.T) {
 	tests := []struct {
 		name   string
-		stored vector
-		query  vector
+		stored Vector
+		query  Vector
 	}{
-		{name: "dimension mismatch", stored: vector{1, 0}, query: vector{1, 0, 0}},
-		{name: "empty query vector", stored: vector{1, 0}, query: vector{}},
-		{name: "zero query vector", stored: vector{1, 0}, query: vector{0, 0}},
-		{name: "zero stored vector", stored: vector{0, 0}, query: vector{1, 0}},
+		{name: "dimension mismatch", stored: Vector{1, 0}, query: Vector{1, 0, 0}},
+		{name: "empty query vector", stored: Vector{1, 0}, query: Vector{}},
+		{name: "zero query vector", stored: Vector{1, 0}, query: Vector{0, 0}},
+		{name: "zero stored vector", stored: Vector{0, 0}, query: Vector{1, 0}},
 	}
 
 	for _, tt := range tests {
@@ -127,13 +127,13 @@ func TestVectorStoreSearchReturnsErrorForInvalidVectors(t *testing.T) {
 func TestCosineSimilarity(t *testing.T) {
 	tests := []struct {
 		name string
-		a    vector
-		b    vector
+		a    Vector
+		b    Vector
 		want float64
 	}{
-		{name: "same direction", a: vector{1, 0}, b: vector{1, 0}, want: 1},
-		{name: "orthogonal", a: vector{1, 0}, b: vector{0, 1}, want: 0},
-		{name: "opposite direction", a: vector{1, 0}, b: vector{-1, 0}, want: -1},
+		{name: "same direction", a: Vector{1, 0}, b: Vector{1, 0}, want: 1},
+		{name: "orthogonal", a: Vector{1, 0}, b: Vector{0, 1}, want: 0},
+		{name: "opposite direction", a: Vector{1, 0}, b: Vector{-1, 0}, want: -1},
 	}
 
 	for _, tt := range tests {
@@ -166,8 +166,8 @@ func testChunk(sourceFile string, index int, content string) *Chunk {
 // mustAddVector 向向量库添加测试向量, 添加失败时立即终止测试。
 // 输入: `store` 是待写入的向量库, `vec` 是测试向量, `chunk` 是测试 chunk。
 // 输出: 成功时无返回; 失败时调用 `t.Fatalf`。
-// 示例: `mustAddVector(t, store, vector{1, 0}, testChunk("notes/rag.md", 0, "chunk"))`。
-func mustAddVector(t *testing.T, store VectorStore, vec vector, chunk *Chunk) {
+// 示例: `mustAddVector(t, store, Vector{1, 0}, testChunk("notes/rag.md", 0, "chunk"))`。
+func mustAddVector(t *testing.T, store VectorStore, vec Vector, chunk *Chunk) {
 	t.Helper()
 	if err := store.Add(vec, chunk); err != nil {
 		t.Fatalf("add vector failed: %v", err)

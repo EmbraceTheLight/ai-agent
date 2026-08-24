@@ -16,13 +16,13 @@ type VectorStore interface {
 	// 输入: `Vector` 是 chunk embedding, `chunk` 是包含来源信息的 chunk。
 	// 输出: 成功返回 nil; 向量非法或 chunk 为空时返回错误。
 	// 示例: `Add(Vector{1, 0}, chunk)`。
-	Add(vector vector, chunk *Chunk) error
+	Add(vector Vector, chunk *Chunk) error
 
 	// Search 检索与 queryVector 最相似的 topK 个 chunk。
 	// 输入: `queryVector` 是问题 embedding, `topK` 是返回数量。
 	// 输出: 返回按相似度降序排列的结果。
 	// 示例: `Search(Vector{1, 0}, 2)`。
-	Search(queryVector vector, topK int) ([]*CosineSimilarity, error)
+	Search(queryVector Vector, topK int) ([]*CosineSimilarity, error)
 }
 
 type defaultVectorStore []*Embedding
@@ -39,7 +39,7 @@ func NewVectorStore() VectorStore {
 // 输入: `Vector` 是 chunk 的 embedding 向量, `chunk` 是带来源文件和序号的 chunk。
 // 输出: 成功时返回 nil; 向量为空或 chunk 为 nil 时返回错误。
 // 示例: `store.Add(Vector{1, 0}, &Chunk{SourceFile: "notes/rag.md", ChunkIndex: 0, Content: "RAG"})`。
-func (v *defaultVectorStore) Add(vector vector, chunk *Chunk) error {
+func (v *defaultVectorStore) Add(vector Vector, chunk *Chunk) error {
 	if len(vector) == 0 {
 		return errors.New("插入的向量维度为 0")
 	}
@@ -57,7 +57,7 @@ func (v *defaultVectorStore) Add(vector vector, chunk *Chunk) error {
 // 输入: `queryVector` 是问题的 embedding 向量, `topK` 是需要返回的结果数量。
 // 输出: 返回按余弦相似度降序排列的检索结果; 参数非法或向量无法比较时返回错误。
 // 示例: `store.Search(Vector{1, 0}, 3)` -> 返回分数最高的 3 个 chunk。
-func (v *defaultVectorStore) Search(queryVector vector, topK int) ([]*CosineSimilarity, error) {
+func (v *defaultVectorStore) Search(queryVector Vector, topK int) ([]*CosineSimilarity, error) {
 	if topK <= 0 {
 		return nil, fmt.Errorf("topK 必须大于 0")
 	}
@@ -92,8 +92,8 @@ func (v *defaultVectorStore) Search(queryVector vector, topK int) ([]*CosineSimi
 // cosineSimilarity 计算两个向量的余弦相似度
 // 输入: `a` 和 `b` 是两个维度一致的非零向量。
 // 输出: 返回二者的余弦相似度; 维度不一致、空向量或零向量时返回错误。
-// 示例: `cosineSimilarity(vector{1, 0}, vector{1, 0})` -> `1`。
-func cosineSimilarity(a, b vector) (float64, error) {
+// 示例: `cosineSimilarity(Vector{1, 0}, Vector{1, 0})` -> `1`。
+func cosineSimilarity(a, b Vector) (float64, error) {
 	if len(a) != len(b) {
 		return 0, fmt.Errorf("向量长度不一致. a: %d, b: %d", len(a), len(b))
 	}
@@ -115,8 +115,8 @@ func cosineSimilarity(a, b vector) (float64, error) {
 // getVectorLength 计算向量的欧几里得长度。
 // 输入: `Vector` 是待计算的向量。
 // 输出: 返回 `sqrt(sum(x_i^2))`; 空向量返回 0。
-// 示例: `getVectorLength(vector{3, 4})` -> `5`。
-func getVectorLength(vector vector) float64 {
+// 示例: `getVectorLength(Vector{3, 4})` -> `5`。
+func getVectorLength(vector Vector) float64 {
 	if len(vector) == 0 {
 		return 0
 	}
