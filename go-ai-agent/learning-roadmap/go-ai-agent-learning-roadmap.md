@@ -96,7 +96,7 @@ testdata/
 
 ## 官方文档索引
 
-优先看官方文档，不要一开始就跟着二手教程堆框架。中文官方文档目前主要集中在国内模型供应商；OpenAI、MCP、Go、pgvector 等核心资料以英文官方文档为主。
+优先看官方文档，不要一开始就跟着二手教程堆框架。中文官方文档目前主要集中在国内模型供应商；OpenAI、MCP、Go、Milvus 等核心资料以英文官方文档为主。
 
 ### LLM API / Tool Calling / Agent
 
@@ -115,6 +115,9 @@ testdata/
 
 ### RAG / 向量检索 / 数据库
 
+- Milvus 官方文档：<https://milvus.io/docs>
+- Milvus Go SDK：<https://milvus.io/docs/install-go.md>
+- Milvus Docker Compose：<https://milvus.io/docs/install_standalone-docker-compose.md>
 - pgvector 官方仓库：<https://github.com/pgvector/pgvector>
 - PostgreSQL 官方文档：<https://www.postgresql.org/docs/>
 - Qdrant 官方文档：<https://qdrant.tech/documentation/>
@@ -139,7 +142,7 @@ testdata/
 使用建议：
 
 - 第 1-2 周优先看 OpenAI Responses API、Function Calling、Structured Outputs 和所选模型供应商的 API 文档。
-- 第 3-4 周看 pgvector、PostgreSQL、Qdrant，不要过早纠结向量数据库选型。
+- 第 3 周先看 RAG、embedding、chunk 和内存向量检索；第 4 周重点看 Milvus、Docker Compose、collection schema、metadata filter 和 Go SDK。pgvector / PostgreSQL / Qdrant 作为对照资料，不作为本路线第 4 周主线。
 - 第 5-6 周看 MCP 官方文档和 MCP Go SDK。
 - 第 7-12 周补 Docker Compose、OpenTelemetry、Go testing、数据库和部署文档。
 
@@ -225,25 +228,30 @@ testdata/
 
 ## 第 4 周：RAG 生产化
 
-本周目标：把 RAG 从 Demo 做成接近真实项目的后端服务。
+本周目标：把 RAG 从 Demo 做成接近真实项目的后端服务。本路线当前采用 Milvus 作为主线向量数据库，重点补齐专业向量库、持久化检索、metadata filter 和服务化能力。
+
+选择 Milvus 的原因：你已经有较多 MySQL / SQL 后端经验，第 4 周更适合把注意力放在专业向量数据库的 collection schema、向量索引、search params、scalar filter 和独立服务部署上。pgvector 可以作为对照方案了解，但不作为本周主线。
 
 | 时间 | 学习内容 | 交付物 |
 |---|---|---|
-| 周一 | 设计 `VectorStore` 接口，先保持内存实现可用 | `VectorStore` 接口 |
-| 周二 | 给内存向量搜索补测试，并给 chunk 加 metadata：文件名、标题、段落编号、更新时间 | metadata + tests |
-| 周三 | 设计 PostgreSQL 表结构和迁移脚本，为 pgvector 接入做准备 | schema + migration |
-| 周四 | 接入 PostgreSQL + pgvector，把内存向量搜索迁移到持久化存储 | pgvector 存储 |
+| 周一 | 重新整理 `VectorStore` 接口，让内存实现和 Milvus 实现可以共享同一套 RAG 流程 | `VectorStore` interface |
+| 周二 | 补全 chunk metadata 和测试，确保 source file、chunk index、content 等信息在检索后不丢失 | metadata + tests |
+| 周三 | 设计 Milvus collection schema，明确主键、metadata 字段、vector 字段、embedding dimension 和 metric type | Milvus schema |
+| 周四 | 接入 Milvus Go SDK，把 chunk embedding 写入 Milvus，并实现 topK 向量检索 | Milvus VectorStore |
 | 周五 | 写一个简单 eval 脚本，统计 retrieval recall、groundedness、abstention、latency/cost | eval 脚本 |
-| 周六 | 把 RAG 做成 HTTP API：`/ask`、`/documents/import`，并支持 metadata filter | RAG API |
-| 周日 | 写技术总结：RAG 流程、问题、优化点、面试怎么讲 | README v2 |
+| 周六 | 把 RAG 做成 HTTP API：`/ask`、`/documents/import`、`/health`，并支持至少一个 metadata filter | RAG API |
+| 周日 | 写技术总结：RAG 流程、Milvus 接入、问题、优化点、面试怎么讲 | README v2 |
 
 本周重点：
 
-- 面试时不要只说“用了向量数据库”。
+- 面试时不要只说“用了 Milvus”。
 - 要能讲清楚 chunk 策略、topK、metadata filter、无法回答策略。
+- 要能讲清楚 Milvus collection schema、embedding dimension、metric type 和 scalar filter。
 - 要有一组测试问题证明系统效果。
 - eval 至少覆盖 10-20 个问题，包括能回答、不能回答、引用错误、相似但无关的问题。
 - 第 4 周不要一开始就硬切数据库；先抽象接口，再替换存储实现，这更符合 Go 后端工程习惯。
+
+详细计划见：`learning-roadmap/week-04-rag-production-milvus-detail.md`
 
 ## 第 5 周：真正的 Agent Loop
 
@@ -370,7 +378,7 @@ testdata/
 
 | 时间 | 学习内容 | 交付物 |
 |---|---|---|
-| 周一 | 用 Docker Compose 启动 API、PostgreSQL、pgvector | docker compose |
+| 周一 | 用 Docker Compose 启动 API、Milvus、Ollama；如需业务数据，再补 MySQL 或 PostgreSQL | docker compose |
 | 周二 | 加健康检查和配置管理 | health + config |
 | 周三 | 给文档导入做异步任务，避免大文件阻塞请求 | job queue |
 | 周四 | 加 request id、trace id、结构化日志 | structured logging |
@@ -407,7 +415,7 @@ testdata/
 
 12 周结束时，进一步满足：
 
-- 使用 PostgreSQL + pgvector 做持久化向量存储。
+- 使用 Milvus 做持久化向量存储，并支持 metadata filter。
 - 有 Docker Compose 或等价的一键本地启动方式。
 - 有权限模型、审计日志、脱敏和 prompt injection 测试样例。
 - 有结构化日志、request id、token/cost/latency 统计。
@@ -420,7 +428,7 @@ testdata/
 - 导入 markdown/txt 文档。
 - 自动切分 chunk。
 - 调用 embedding API。
-- 使用 PostgreSQL + pgvector 存储向量和 metadata。
+- 使用 Milvus 存储向量和 metadata。
 - 根据问题检索相关片段。
 - 基于引用回答问题。
 - 提供 HTTP API。
@@ -439,7 +447,7 @@ GET  /health
 
 可以这样描述：
 
-> 我用 Go 实现了一个企业知识库 RAG Agent，支持文档导入、chunk 切分、embedding、pgvector 向量检索、metadata filter 和引用回答。为了减少幻觉，我加入了无法回答判断和引用来源展示，并用一组测试问题评估检索召回、引用质量、拒答能力、延迟和成本。
+> 我用 Go 实现了一个企业知识库 RAG Agent，支持文档导入、chunk 切分、embedding、Milvus 向量检索、metadata filter 和引用回答。为了减少幻觉，我加入了无法回答判断和引用来源展示，并用一组测试问题评估检索召回、引用质量、拒答能力、延迟和成本。
 
 ## 最终项目二：Go MCP Ops Agent
 
