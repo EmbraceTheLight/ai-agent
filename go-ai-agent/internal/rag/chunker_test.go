@@ -16,16 +16,16 @@ func TestChunkDocumentSplitsContentWithOverlap(t *testing.T) {
 	}
 
 	want := []Chunk{
-		{SourceFile: doc.SourcePath, ChunkIndex: 0, Content: "abcdefghij", Start: 0, End: 10},
-		{SourceFile: doc.SourcePath, ChunkIndex: 1, Content: "hijklmnopq", Start: 7, End: 17},
-		{SourceFile: doc.SourcePath, ChunkIndex: 2, Content: "opqrstuvwx", Start: 14, End: 24},
-		{SourceFile: doc.SourcePath, ChunkIndex: 3, Content: "vwxyz", Start: 21, End: 26},
+		{SourceFile: doc.SourcePath, ChunkIndex: 0, Content: "abcdefghij", RuneStartOffset: 0, RuneEndOffset: 10},
+		{SourceFile: doc.SourcePath, ChunkIndex: 1, Content: "hijklmnopq", RuneStartOffset: 7, RuneEndOffset: 17},
+		{SourceFile: doc.SourcePath, ChunkIndex: 2, Content: "opqrstuvwx", RuneStartOffset: 14, RuneEndOffset: 24},
+		{SourceFile: doc.SourcePath, ChunkIndex: 3, Content: "vwxyz", RuneStartOffset: 21, RuneEndOffset: 26},
 	}
 	assertChunksEqual(t, chunks, want)
 }
 
 // TestChunkDocumentUsesRuneOffsets 测试中文内容不会按字节切坏,
-// Start/End 记录的是 rune 偏移量。
+// RuneStartOffset/RuneEndOffset 记录的是 rune 偏移量。
 func TestChunkDocumentUsesRuneOffsets(t *testing.T) {
 	doc := &Document{
 		SourcePath: "notes/chinese.md",
@@ -38,9 +38,9 @@ func TestChunkDocumentUsesRuneOffsets(t *testing.T) {
 	}
 
 	want := []Chunk{
-		{SourceFile: doc.SourcePath, ChunkIndex: 0, Content: "你好世", Start: 0, End: 3},
-		{SourceFile: doc.SourcePath, ChunkIndex: 1, Content: "世界a", Start: 2, End: 5},
-		{SourceFile: doc.SourcePath, ChunkIndex: 2, Content: "abc", Start: 4, End: 7},
+		{SourceFile: doc.SourcePath, ChunkIndex: 0, Content: "你好世", RuneStartOffset: 0, RuneEndOffset: 3},
+		{SourceFile: doc.SourcePath, ChunkIndex: 1, Content: "世界a", RuneStartOffset: 2, RuneEndOffset: 5},
+		{SourceFile: doc.SourcePath, ChunkIndex: 2, Content: "abc", RuneStartOffset: 4, RuneEndOffset: 7},
 	}
 	assertChunksEqual(t, chunks, want)
 }
@@ -59,7 +59,7 @@ func TestChunkDocumentReturnsSingleChunkWhenContentShorterThanSize(t *testing.T)
 	}
 
 	want := []Chunk{
-		{SourceFile: doc.SourcePath, ChunkIndex: 0, Content: "short", Start: 0, End: 5},
+		{SourceFile: doc.SourcePath, ChunkIndex: 0, Content: "short", RuneStartOffset: 0, RuneEndOffset: 5},
 	}
 	assertChunksEqual(t, chunks, want)
 }
@@ -78,8 +78,8 @@ func TestChunkDocumentSupportsZeroOverlap(t *testing.T) {
 	}
 
 	want := []Chunk{
-		{SourceFile: doc.SourcePath, ChunkIndex: 0, Content: "abc", Start: 0, End: 3},
-		{SourceFile: doc.SourcePath, ChunkIndex: 1, Content: "def", Start: 3, End: 6},
+		{SourceFile: doc.SourcePath, ChunkIndex: 0, Content: "abc", RuneStartOffset: 0, RuneEndOffset: 3},
+		{SourceFile: doc.SourcePath, ChunkIndex: 1, Content: "def", RuneStartOffset: 3, RuneEndOffset: 6},
 	}
 	assertChunksEqual(t, chunks, want)
 }
@@ -136,11 +136,11 @@ func assertChunksEqual(t *testing.T, got []*Chunk, want []Chunk) {
 		if got[i].Content != want[i].Content {
 			t.Fatalf("chunk %d expected content %q, got %q", i, want[i].Content, got[i].Content)
 		}
-		if got[i].Start != want[i].Start {
-			t.Fatalf("chunk %d expected start %d, got %d", i, want[i].Start, got[i].Start)
+		if got[i].RuneStartOffset != want[i].RuneStartOffset {
+			t.Fatalf("chunk %d expected start %d, got %d", i, want[i].RuneStartOffset, got[i].RuneStartOffset)
 		}
-		if got[i].End != want[i].End {
-			t.Fatalf("chunk %d expected end %d, got %d", i, want[i].End, got[i].End)
+		if got[i].RuneEndOffset != want[i].RuneEndOffset {
+			t.Fatalf("chunk %d expected end %d, got %d", i, want[i].RuneEndOffset, got[i].RuneEndOffset)
 		}
 	}
 }

@@ -3,23 +3,8 @@ package rag
 import (
 	"fmt"
 	"strings"
+	"time"
 )
-
-// Chunk 表示文档切分后的一个片段。
-// 输入: 来源文档内容经过 `ChunkDocument` 切分得到。
-// 输出: 保存 chunk 文本、来源文件、序号和 rune 偏移。
-// 示例: `Chunk{SourceFile: "notes/rag.md", ChunkIndex: 0, Content: "RAG"}`。
-type Chunk struct {
-	SourceFile string // 源文件路径
-	ChunkIndex int    // Chunk 索引
-	Content    string // 分块内容
-
-	// 分块起始偏移量, 该偏移量为形式上的偏移量, 并非按照字节偏移.
-	// 对于存在 rune 的文本, 该偏移量可能无法直接用于切片操作
-	// 如 "你好x", 其对应的 x 的 Start 偏移量为 2, 而非字节偏移 6。
-	Start int
-	End   int // 分块终止偏移量
-}
 
 // ChunkDocument 按固定 rune 数量和 overlap 将文档切分为多个 chunk。
 // 输入: `doc` 是待切分文档, `size` 是每个 chunk 的最大 rune 数, `overlap` 是相邻 chunk 的重叠 rune 数。
@@ -47,11 +32,15 @@ func ChunkDocument(doc *Document, size, overlap int) ([]*Chunk, error) {
 		if end > len(runes) {
 			end = len(runes)
 		}
+		timestamp := time.Now().UnixMilli()
 		chunk := &Chunk{
-			SourceFile: doc.SourcePath,
-			Start:      start,
-			End:        end,
-			ChunkIndex: chunkIdx,
+			Title:           doc.Title,
+			SourceFile:      doc.SourcePath,
+			RuneStartOffset: start,
+			RuneEndOffset:   end,
+			ChunkIndex:      chunkIdx,
+			CreatedAt:       timestamp,
+			UpdatedAt:       timestamp,
 		}
 		for i := start; i < end; i++ {
 			sb.WriteRune(runes[i])

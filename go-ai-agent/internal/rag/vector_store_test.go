@@ -155,11 +155,11 @@ func TestCosineSimilarity(t *testing.T) {
 // 示例: `testChunk("notes/rag.md", 0, "RAG")`。
 func testChunk(sourceFile string, index int, content string) *Chunk {
 	return &Chunk{
-		SourceFile: sourceFile,
-		ChunkIndex: index,
-		Content:    content,
-		Start:      0,
-		End:        len([]rune(content)),
+		SourceFile:      sourceFile,
+		ChunkIndex:      index,
+		Content:         content,
+		RuneStartOffset: 0,
+		RuneEndOffset:   len([]rune(content)),
 	}
 }
 
