@@ -182,7 +182,7 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 	fmt.Println("问题:", cfg.Question)
 	fmt.Println("检索结果:")
 	for i, result := range searchResults {
-		chunk := result.Embed.Chunk
+		chunk := result.Chunk
 		fmt.Printf("[%d] score=%.4f source=%s#chunk-%d\n", i+1, result.Score, chunk.SourceFile, chunk.ChunkIndex)
 		if cfg.ShowPreview {
 			fmt.Println("preview:", previewText(chunk.Content, 120))

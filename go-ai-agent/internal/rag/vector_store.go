@@ -22,7 +22,7 @@ type VectorStore interface {
 	// 输入: `queryVector` 是问题 embedding, `topK` 是返回数量。
 	// 输出: 返回按相似度降序排列的结果。
 	// 示例: `Search(Vector{1, 0}, 2)`。
-	Search(queryVector Vector, topK int) ([]*CosineSimilarity, error)
+	Search(queryVector Vector, topK int) ([]*SearchResult, error)
 }
 
 type defaultVectorStore []*Embedding
@@ -57,12 +57,12 @@ func (v *defaultVectorStore) Add(vector Vector, chunk *Chunk) error {
 // 输入: `queryVector` 是问题的 embedding 向量, `topK` 是需要返回的结果数量。
 // 输出: 返回按余弦相似度降序排列的检索结果; 参数非法或向量无法比较时返回错误。
 // 示例: `store.Search(Vector{1, 0}, 3)` -> 返回分数最高的 3 个 chunk。
-func (v *defaultVectorStore) Search(queryVector Vector, topK int) ([]*CosineSimilarity, error) {
+func (v *defaultVectorStore) Search(queryVector Vector, topK int) ([]*SearchResult, error) {
 	if topK <= 0 {
 		return nil, fmt.Errorf("topK 必须大于 0")
 	}
-	var smallPQ SmallRootCosineSimilarity
-	ret := make([]*CosineSimilarity, topK)
+	var smallPQ SearchResultMinHeap
+	ret := make([]*SearchResult, topK)
 
 	heap.Init(&smallPQ)
 	for i := 0; i < len(*v); i++ {
@@ -70,8 +70,8 @@ func (v *defaultVectorStore) Search(queryVector Vector, topK int) ([]*CosineSimi
 		if err != nil {
 			return nil, err
 		}
-		heap.Push(&smallPQ, &CosineSimilarity{
-			Embed: (*v)[i],
+		heap.Push(&smallPQ, &SearchResult{
+			Chunk: (*v)[i].Chunk,
 			Score: cs,
 		})
 		if len(smallPQ) > topK {
@@ -84,7 +84,7 @@ func (v *defaultVectorStore) Search(queryVector Vector, topK int) ([]*CosineSimi
 
 	// 从小根堆中取 topK, 逆序放入 ret 中, 使 ret 中的元素为按照余弦相似度降序排序
 	for i := topK - 1; i >= 0; i-- {
-		ret[i] = heap.Pop(&smallPQ).(*CosineSimilarity)
+		ret[i] = heap.Pop(&smallPQ).(*SearchResult)
 	}
 	return ret, nil
 }

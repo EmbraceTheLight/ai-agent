@@ -22,11 +22,11 @@ func TestVectorStoreSearchReturnsTopKInDescendingScore(t *testing.T) {
 		t.Fatalf("expected 2 results, got %d", len(results))
 	}
 
-	if results[0].Embed.Chunk.Content != "A exact match" {
-		t.Fatalf("expected first result A exact match, got %q", results[0].Embed.Chunk.Content)
+	if results[0].Chunk.Content != "A exact match" {
+		t.Fatalf("expected first result A exact match, got %q", results[0].Chunk.Content)
 	}
-	if results[1].Embed.Chunk.Content != "B close match" {
-		t.Fatalf("expected second result B close match, got %q", results[1].Embed.Chunk.Content)
+	if results[1].Chunk.Content != "B close match" {
+		t.Fatalf("expected second result B close match, got %q", results[1].Chunk.Content)
 	}
 	if results[0].Score < results[1].Score {
 		t.Fatalf("expected descending scores, got %.6f then %.6f", results[0].Score, results[1].Score)
@@ -34,11 +34,11 @@ func TestVectorStoreSearchReturnsTopKInDescendingScore(t *testing.T) {
 	if math.Abs(results[0].Score-1) > 1e-9 {
 		t.Fatalf("expected first score close to 1, got %.12f", results[0].Score)
 	}
-	if results[0].Embed.Chunk.SourceFile != "notes/a.md" {
-		t.Fatalf("expected first source file notes/a.md, got %q", results[0].Embed.Chunk.SourceFile)
+	if results[0].Chunk.SourceFile != "notes/a.md" {
+		t.Fatalf("expected first source file notes/a.md, got %q", results[0].Chunk.SourceFile)
 	}
-	if results[0].Embed.Chunk.ChunkIndex != 0 {
-		t.Fatalf("expected first chunk index 0, got %d", results[0].Embed.Chunk.ChunkIndex)
+	if results[0].Chunk.ChunkIndex != 0 {
+		t.Fatalf("expected first chunk index 0, got %d", results[0].Chunk.ChunkIndex)
 	}
 }
 

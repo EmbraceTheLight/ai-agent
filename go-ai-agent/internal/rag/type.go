@@ -45,32 +45,32 @@ type Document struct {
 	Content    string
 }
 
-// CosineSimilarity 表示一次向量检索命中的结果。
-// 输入: `Embed` 是命中的向量库记录, `Score` 是 query 与记录向量的余弦相似度。
+// SearchResult 表示一次向量检索命中的结果。
+// 输入: `Chunk` 是命中的向量库记录, `Score` 是 query 与记录向量的余弦相似度。
 // 输出: 由 `VectorStore.Search` 按相似度降序返回。
-// 示例: `CosineSimilarity{Embed: embedding, Score: 0.92}`。
-type CosineSimilarity struct {
-	Embed *Embedding
+// 示例: `SearchResult{Chunk: chunk, Score: 0.92}`。
+type SearchResult struct {
+	Chunk *Chunk
 	Score float64 // 余弦相似度
 }
 
-// SmallRootCosineSimilarity 是按余弦相似度排序的小根堆。
-// 输入: 堆中的元素是 `*CosineSimilarity`。
+// SearchResultMinHeap 是按余弦相似度排序的小根堆。
+// 输入: 堆中的元素是 `*SearchResult`。
 // 输出: 堆顶始终是当前候选集合中分数最低的结果。
 // 示例: 用于保留 topK 个最高分检索结果。
-type SmallRootCosineSimilarity []*CosineSimilarity
+type SearchResultMinHeap []*SearchResult
 
 // Len 返回堆中元素数量。
 // 输入: 当前堆。
 // 输出: 堆长度。
 // 示例: `pq.Len()` -> `3`。
-func (bigPQ SmallRootCosineSimilarity) Len() int { return len(bigPQ) }
+func (bigPQ SearchResultMinHeap) Len() int { return len(bigPQ) }
 
 // Less 定义小根堆排序规则。
 // 输入: 两个元素下标。
 // 输出: 当 i 的分数小于 j 时返回 true。
 // 示例: 分数更低的结果会排到堆顶。
-func (bigPQ SmallRootCosineSimilarity) Less(i, j int) bool {
+func (bigPQ SearchResultMinHeap) Less(i, j int) bool {
 	return bigPQ[i].Score < bigPQ[j].Score
 }
 
@@ -78,23 +78,23 @@ func (bigPQ SmallRootCosineSimilarity) Less(i, j int) bool {
 // 输入: 两个元素下标。
 // 输出: 原地修改堆切片。
 // 示例: heap 调整过程中调用。
-func (bigPQ SmallRootCosineSimilarity) Swap(i, j int) {
+func (bigPQ SearchResultMinHeap) Swap(i, j int) {
 	bigPQ[i], bigPQ[j] = bigPQ[j], bigPQ[i]
 }
 
 // Push 向堆中追加一个检索结果。
-// 输入: `x` 必须是 `*CosineSimilarity`。
+// 输入: `x` 必须是 `*SearchResult`。
 // 输出: 原地扩展堆切片。
 // 示例: `heap.Push(&pq, result)`。
-func (bigPQ *SmallRootCosineSimilarity) Push(x any) {
-	*bigPQ = append(*bigPQ, x.(*CosineSimilarity))
+func (bigPQ *SearchResultMinHeap) Push(x any) {
+	*bigPQ = append(*bigPQ, x.(*SearchResult))
 }
 
 // Pop 从堆尾移除并返回一个检索结果。
 // 输入: 当前堆。
-// 输出: 被移除的 `*CosineSimilarity`。
+// 输出: 被移除的 `*SearchResult`。
 // 示例: `heap.Pop(&pq)`。
-func (bigPQ *SmallRootCosineSimilarity) Pop() any {
+func (bigPQ *SearchResultMinHeap) Pop() any {
 	old := *bigPQ
 	n := len(old)
 	x := old[n-1]
