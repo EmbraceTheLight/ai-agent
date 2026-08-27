@@ -52,14 +52,21 @@ func TestGetCurrentTime(t *testing.T) {
 				t.Fatalf("load test location %q failed: %v", tt.locationName, err)
 			}
 
-			parsed, err := time.ParseInLocation(layout, got, location)
+			var resp struct {
+				CurrentTime string `json:"current_time"`
+			}
+			if err := json.Unmarshal([]byte(got), &resp); err != nil {
+				t.Fatalf("unmarshal response failed: %v, got: %q", err, got)
+			}
+
+			parsed, err := time.ParseInLocation(layout, resp.CurrentTime, location)
 			if err != nil {
-				t.Fatalf("expected time layout %q, got %q: %v", layout, got, err)
+				t.Fatalf("expected time layout %q, got %q: %v", layout, resp.CurrentTime, err)
 			}
 
 			now := time.Now().In(location)
 			if parsed.Before(now.Add(-3*time.Second)) || parsed.After(now.Add(3*time.Second)) {
-				t.Fatalf("expected time close to now, got %q, now is %q", got, now.Format(layout))
+				t.Fatalf("expected time close to now, got %q, now is %q", resp.CurrentTime, now.Format(layout))
 			}
 		})
 	}
