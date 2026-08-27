@@ -20,6 +20,11 @@ func BuildPrompt(topKCS []*SearchResult) string {
 	}
 	return sb.String()
 }
+
+// writeLine 向 strings.Builder 写入一行文本并追加换行符。
+// 输入: `sb` 是待写入的 builder, `str` 是要写入的文本。
+// 输出: 直接修改 `sb` 的内容。
+// 示例: `writeLine(&sb, "hello")`。
 func writeLine(sb *strings.Builder, str string) {
 	sb.WriteString(str)
 	sb.WriteString("\n")
