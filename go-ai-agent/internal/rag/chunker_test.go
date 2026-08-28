@@ -1,6 +1,9 @@
 package rag
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 // TestChunkDocumentSplitsContentWithOverlap 测试普通文本按 size 切分,
 // 且相邻 chunk 之间保留 overlap 个 rune 的重叠内容。
@@ -111,6 +114,37 @@ func TestChunkDocumentReturnsErrorForInvalidArguments(t *testing.T) {
 				t.Fatalf("expected nil chunks, got %d", len(chunks))
 			}
 		})
+	}
+}
+
+// TestChunkDocumentCarriesDocumentTitle 测试 chunker 会把 Document.Title 传递给每个 chunk。
+// 输入: testdata 中一个包含标题的 Trilium 导出 Markdown 文档。
+// 输出: 每个 chunk 的 Title 都应与 Document.Title 一致。
+// 示例: `ChunkDocument(doc, 5000, 100)`。
+func TestChunkDocumentCarriesDocumentTitle(t *testing.T) {
+	filePath := filepath.Clean(filepath.Join("..", "..", "testdata", "documents", "work_notes_May", "五月", "第三周.md"))
+
+	loader := NewTriliumDocumentLoader(nil, 0)
+	docs, err := loader.Load(filePath)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if len(docs) != 1 {
+		t.Fatalf("expected 1 document, got %d", len(docs))
+	}
+
+	doc := docs[0]
+	chunks, err := ChunkDocument(doc, 5000, 100)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if len(chunks) == 0 {
+		t.Fatal("expected at least 1 chunk, got 0")
+	}
+	for i, chunk := range chunks {
+		if chunk.Title != doc.Title {
+			t.Fatalf("chunk %d expected title %q, got %q", i, doc.Title, chunk.Title)
+		}
 	}
 }
 

@@ -13,10 +13,11 @@ import (
 // TestEmbeddingClientEmbedsLoadedWorkNoteChunks 测试使用真实 testdata 完成文档加载、chunk 切分和 embedding 请求。
 // 输入: 从 `testdata/documents/work_notes_May/五月/第三周` 加载 markdown 文档, 并把前几个 chunk 发送给模拟 Ollama 服务。
 // 输出: 返回的 embedding 数量应与输入 chunk 数量一致, 每个 embedding 应有固定维度。
-// 示例: `LoadRAGResources(...) -> ChunkDocument(...) -> Embed(ctx, texts)` -> 返回 `[][]float64`。
+// 示例: `NewTriliumDocumentLoader(...).Load(...) -> ChunkDocument(...) -> Embed(ctx, texts)` -> 返回 `[][]float64`。
 func TestEmbeddingClientEmbedsLoadedWorkNoteChunks(t *testing.T) {
 	documentsDir := filepath.Clean(filepath.Join("..", "..", "testdata", "documents", "work_notes_May", "五月", "第三周"))
-	docs, err := LoadRAGResources(documentsDir)
+	loader := NewTriliumDocumentLoader(map[string]bool{".md": true}, 0)
+	docs, err := loader.Load(documentsDir)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}

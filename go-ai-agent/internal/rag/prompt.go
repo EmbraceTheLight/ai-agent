@@ -15,7 +15,7 @@ func BuildPrompt(topKCS []*SearchResult) string {
 	writeLine(&sb, "下面是相关资料, 已经按照相关性得分进行了降序排序:")
 
 	for _, cs := range topKCS {
-		writeLine(&sb, fmt.Sprintf("[来源: %s#chunk-%d, 得分: %f]", cs.Chunk.SourceFile, cs.Chunk.ChunkIndex, cs.Score))
+		writeLine(&sb, fmt.Sprintf("[标题: %s, 来源: %s#chunk-%d, 得分: %f]", cs.Chunk.Title, cs.Chunk.SourceFile, cs.Chunk.ChunkIndex, cs.Score))
 		writeLine(&sb, cs.Chunk.Content)
 	}
 	return sb.String()

@@ -97,11 +97,11 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 	fmt.Println("topK:", cfg.TopK)
 	fmt.Println()
 
-	docs, err := rag.LoadRAGResources(cfg.DocsPath)
+	loader := rag.NewTriliumDocumentLoader(map[string]bool{".md": true}, cfg.LimitDocs)
+	docs, err := loader.Load(cfg.DocsPath)
 	if err != nil {
 		return err
 	}
-	docs = limitDocuments(docs, cfg.LimitDocs)
 	if len(docs) == 0 {
 		return fmt.Errorf("没有可处理的文档")
 	}
@@ -145,6 +145,7 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 		lastEmbeddingDimension = embeddingDimension(embeddings)
 
 		fmt.Printf("[%d] %s\n", i+1, doc.SourcePath)
+		fmt.Println("doc Title:", doc.Title)
 		fmt.Println("chunk 数:", len(chunks))
 		fmt.Println("本次 embedding chunk 数:", len(texts))
 		fmt.Println("embedding 数:", len(embeddings))

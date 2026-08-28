@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-// TestLoadRAGResourcesLoadsMarkdownAndTextRecursively 测试目录递归加载能力:
-// 只加载 .md/.txt 文件, 跳过不支持的扩展名, 并保留文件内容和绝对路径。
-func TestLoadRAGResourcesLoadsMarkdownAndTextRecursively(t *testing.T) {
+// TestTriliumDocumentLoaderLoadsMarkdownAndTextRecursively 测试目录递归加载能力:
+// 只加载 .md/.txt 文件, 跳过不支持的扩展名, 并保留文件内容、标题和绝对路径。
+func TestTriliumDocumentLoaderLoadsMarkdownAndTextRecursively(t *testing.T) {
 	root := t.TempDir()
 	subDir := filepath.Join(root, "notes")
 	if err := os.Mkdir(subDir, 0755); err != nil {
@@ -27,7 +27,8 @@ func TestLoadRAGResourcesLoadsMarkdownAndTextRecursively(t *testing.T) {
 		}
 	}
 
-	docs, err := LoadRAGResources(root)
+	loader := NewTriliumDocumentLoader(map[string]bool{".md": true, ".txt": true}, 0)
+	docs, err := loader.Load(root)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -35,7 +36,7 @@ func TestLoadRAGResourcesLoadsMarkdownAndTextRecursively(t *testing.T) {
 		t.Fatalf("expected 2 documents, got %d", len(docs))
 	}
 
-	gotContentByFile := make(map[string]string, len(docs))
+	gotByFile := make(map[string]*Document, len(docs))
 	for _, doc := range docs {
 		if doc.SourcePath == "" {
 			t.Fatal("expected source path, got empty string")
@@ -46,20 +47,26 @@ func TestLoadRAGResourcesLoadsMarkdownAndTextRecursively(t *testing.T) {
 		if strings.HasSuffix(doc.SourcePath, "ignored.json") {
 			t.Fatalf("expected ignored.json to be skipped, got %q", doc.SourcePath)
 		}
-		gotContentByFile[filepath.Base(doc.SourcePath)] = doc.Content
+		gotByFile[filepath.Base(doc.SourcePath)] = doc
 	}
 
-	if gotContentByFile["rag.md"] != files[filepath.Join(root, "rag.md")] {
-		t.Fatalf("unexpected markdown content: %q", gotContentByFile["rag.md"])
+	if gotByFile["rag.md"].Content != files[filepath.Join(root, "rag.md")] {
+		t.Fatalf("unexpected markdown content: %q", gotByFile["rag.md"].Content)
 	}
-	if gotContentByFile["todo.TXT"] != files[filepath.Join(subDir, "todo.TXT")] {
-		t.Fatalf("unexpected text content: %q", gotContentByFile["todo.TXT"])
+	if gotByFile["rag.md"].Title != "RAG" {
+		t.Fatalf("unexpected markdown title: %q", gotByFile["rag.md"].Title)
+	}
+	if gotByFile["todo.TXT"].Content != files[filepath.Join(subDir, "todo.TXT")] {
+		t.Fatalf("unexpected text content: %q", gotByFile["todo.TXT"].Content)
+	}
+	if gotByFile["todo.TXT"].Title != "chunk and embedding" {
+		t.Fatalf("unexpected text title: %q", gotByFile["todo.TXT"].Title)
 	}
 }
 
-// TestLoadRAGResourcesLoadsSingleFile 测试传入单个支持文件路径时,
-// 能返回一个 Document, 且 SourcePath 和 Content 与源文件一致。
-func TestLoadRAGResourcesLoadsSingleFile(t *testing.T) {
+// TestTriliumDocumentLoaderLoadsSingleFile 测试传入单个支持文件路径时,
+// 能返回一个 Document, 且 SourcePath、Content 和 Title 与源文件一致。
+func TestTriliumDocumentLoaderLoadsSingleFile(t *testing.T) {
 	root := t.TempDir()
 	filePath := filepath.Join(root, "single.md")
 	content := "# Single\nonly one document"
@@ -67,7 +74,8 @@ func TestLoadRAGResourcesLoadsSingleFile(t *testing.T) {
 		t.Fatalf("write test file failed: %v", err)
 	}
 
-	docs, err := LoadRAGResources(filePath)
+	loader := NewTriliumDocumentLoader(map[string]bool{".md": true}, 0)
+	docs, err := loader.Load(filePath)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -85,17 +93,21 @@ func TestLoadRAGResourcesLoadsSingleFile(t *testing.T) {
 	if docs[0].Content != content {
 		t.Fatalf("expected content %q, got %q", content, docs[0].Content)
 	}
+	if docs[0].Title != "Single" {
+		t.Fatalf("expected title %q, got %q", "Single", docs[0].Title)
+	}
 }
 
-// TestLoadRAGResourcesReturnsErrorWhenNoSupportedFiles 测试目录中没有 .md/.txt 文件时,
+// TestTriliumDocumentLoaderReturnsErrorWhenNoSupportedFiles 测试目录中没有 .md/.txt 文件时,
 // 加载器会返回错误, 并且不返回任何文档。
-func TestLoadRAGResourcesReturnsErrorWhenNoSupportedFiles(t *testing.T) {
+func TestTriliumDocumentLoaderReturnsErrorWhenNoSupportedFiles(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "meta.json"), []byte(`{"name":"skip"}`), 0644); err != nil {
 		t.Fatalf("write unsupported file failed: %v", err)
 	}
 
-	docs, err := LoadRAGResources(root)
+	loader := NewTriliumDocumentLoader(map[string]bool{".md": true, ".txt": true}, 0)
+	docs, err := loader.Load(root)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

@@ -9,31 +9,6 @@ import (
 	"strings"
 )
 
-// LoadRAGResources 从本地路径加载 RAG 文档资源。
-// 输入: `path` 可以是单个 `.md`/`.txt` 文件, 也可以是包含这些文件的目录。
-// 输出: 返回文档列表; 路径无效、没有支持文件或读取失败时返回错误。
-// 示例: `LoadRAGResources("testdata/documents")` -> 返回可用于 chunk 切分的 `[]*Document`。
-func LoadRAGResources(path string) ([]*Document, error) {
-	var documents []*Document
-	allowExt := map[string]bool{
-		".md":  true,
-		".txt": true,
-	}
-	filepathList, err := GetAllFile(path, allowExt)
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("目录 %s, 收集到的 .md && .txt 文件共有 %d 个\n", path, len(filepathList))
-	for _, filePath := range filepathList {
-		fileContent, err := os.ReadFile(filePath)
-		if err != nil {
-			return nil, err
-		}
-		documents = append(documents, &Document{SourcePath: filePath, Content: string(fileContent)})
-	}
-	return documents, nil
-}
-
 // GetAllFile 获取 path 下所有扩展名位于 allowExt 中的文件路径。
 // 输入: `root` 是待收集路径, 一般为目录, 也可以是单个文件; `allowExt` 是允许的扩展名集合。
 // 输出: 返回符合条件的绝对文件路径列表; 路径无效或没有符合条件的文件时返回错误。
