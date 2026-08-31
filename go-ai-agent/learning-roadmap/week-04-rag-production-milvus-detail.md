@@ -9,7 +9,7 @@
 - 保持第 3 周内存 `VectorStore` 可用。
 - 抽象出可替换的 `VectorStore` 接口，让内存实现和 Milvus 实现共享同一套检索流程。
 - 为 chunk 补充更完整 metadata。
-- 使用 Docker Compose 启动 Milvus。
+- 使用 Kubernetes 部署 Milvus。
 - 设计 Milvus collection schema。
 - 实现 Milvus 写入和向量检索。
 - 支持至少一个 metadata filter，例如按 source file 或文档目录过滤。
@@ -44,6 +44,23 @@ chunk 需要可追踪 metadata
 
 本周不要把目标变成“学完 Milvus 所有功能”。只需要把它作为 RAG 的持久化向量库接进当前项目。
 
+## Milvus 部署约定
+
+本周使用本地 Kubernetes 集群部署 Milvus。为了控制学习范围，第一版使用 Milvus Standalone，并通过 Helm 管理部署资源；后续需要高可用或横向扩展时，再评估 Milvus Distributed 或 Milvus Operator。
+
+本地集群可以使用现有的 Kubernetes 环境，也可以使用 Minikube、Kind 等工具创建。应用在集群外运行时，通过 `kubectl port-forward` 暴露 Milvus Proxy；应用部署到同一集群后，则应使用 Kubernetes Service 的 DNS 地址连接。
+
+建议将部署相关文件整理为：
+
+```text
+deploy/
+  k8s/
+    milvus-values.yaml
+    README.md
+```
+
+`README.md` 至少记录：Kubernetes 前置条件、Helm 安装命令、命名空间、Pod/Service 检查命令、删除命令以及本地端口转发方式。不要把生成的集群状态或本地 kubeconfig 提交到仓库。
+
 ## 推荐目录
 
 可以在现有项目结构上逐步增加：
@@ -63,8 +80,9 @@ cmd/
   rag-cli/
   rag-api/
 deploy/
-  docker-compose/
-    docker-compose.yaml
+  k8s/
+    milvus-values.yaml
+    README.md
 testdata/
   eval/
     rag_cases.jsonl
@@ -269,7 +287,23 @@ metadata 字段：
 
 ### 今日步骤
 
-1. 使用 Docker Compose 启动 Milvus。
+1. 准备 Kubernetes 环境并使用 Helm 部署 Milvus Standalone：
+
+```powershell
+kubectl create namespace milvus
+helm repo add zilliz https://zilliztech.github.io/milvus-helm
+helm repo update
+helm install milvus zilliz/milvus --namespace milvus --set cluster.enabled=false
+kubectl get pods,svc -n milvus
+```
+
+等待 Milvus 相关 Pod 进入 `Running` 或 `Ready` 状态。应用在本地运行时，可以转发 Milvus Proxy：
+
+```powershell
+kubectl port-forward svc/milvus 19530:19530 -n milvus
+```
+
+如果当前 Helm chart 生成的 Service 名称不同，以 `kubectl get svc -n milvus` 的实际名称为准，并将完整过程记录到 `deploy/k8s/README.md`。
 
 2. 增加配置项：
 
@@ -277,6 +311,8 @@ metadata 字段：
 MILVUS_ADDR=localhost:19530
 MILVUS_COLLECTION=rag_chunks
 ```
+
+应用如果也部署在 Kubernetes 集群中，应将 `MILVUS_ADDR` 改为 Milvus Proxy Service 的集群内 DNS 地址，而不是使用 `localhost`。
 
 3. 实现最小 Milvus client 封装：
 
@@ -298,7 +334,7 @@ search queryVector topK
 
 ### 今日验收
 
-能用命令跑通：
+Milvus 部署完成且端口转发建立后，能用命令跑通：
 
 ```powershell
 go run ./cmd/rag-cli -store milvus -docs "testdata/documents/..." -question "..."
@@ -316,11 +352,21 @@ score
 answer with citation
 ```
 
+同时能够使用以下命令确认 Kubernetes 资源状态：
+
+```powershell
+kubectl get pods,svc -n milvus
+kubectl get pvc -n milvus
+```
+
 ### 今日记录
 
 ```text
 周四完成：
-Milvus 如何启动：
+Milvus 如何通过 Kubernetes 启动：
+Kubernetes 集群和命名空间：
+Helm release 与 Service 名称：
+本地端口转发方式：
 插入了多少 chunk：
 检索是否符合预期：
 遇到的 SDK / schema / dimension 问题：
@@ -514,7 +560,9 @@ eval 结果：
 - `VectorStore` 接口可替换。
 - 内存向量库测试仍通过。
 - 有 Milvus collection schema。
-- 能启动 Milvus。
+- 有 Kubernetes 部署说明和配置文件。
+- 能在 Kubernetes 中启动 Milvus。
+- 应用能通过 Service 或 `kubectl port-forward` 连接 Milvus。
 - 能插入 chunk + vector。
 - 能从 Milvus topK 检索。
 - 检索结果带 source file、chunk index、score。
