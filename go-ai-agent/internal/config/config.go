@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -16,10 +17,14 @@ var (
 
 	EmbeddingBaseURL string
 	EmbeddingModel   string
+	EmbeddingDim     int64
+
+	MilvusAddr string
 )
 
 func init() {
 	initEnvVariable()
+
 }
 func initEnvVariable() {
 	_, filename, _, _ := runtime.Caller(1)
@@ -34,6 +39,8 @@ func initEnvVariable() {
 	OpenaiModel = firstNonEmpty(os.Getenv("OPENAI_MODEL"), "gpt-5.5")
 	EmbeddingBaseURL = strings.TrimRight(strings.TrimSpace(os.Getenv("EMBEDDING_BASE_URL")), "/")
 	EmbeddingModel = firstNonEmpty(os.Getenv("EMBEDDING_MODEL"), "qwen3-embedding:0.6b")
+	EmbeddingDim = getIntTypeEnv("EMBEDDING_DIM")
+	MilvusAddr = firstNonEmpty(os.Getenv("MILVUS_ADDR"), "localhost:19530")
 }
 
 // firstNonEmpty 获取 value, 若该值为空, 则返回 fallback
@@ -43,4 +50,12 @@ func firstNonEmpty(value, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func getIntTypeEnv(key string) int64 {
+	value, err := strconv.ParseInt(os.Getenv(key), 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	return value
 }

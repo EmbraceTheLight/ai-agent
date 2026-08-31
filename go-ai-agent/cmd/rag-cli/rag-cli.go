@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/milvus-io/milvus/client/v2/milvusclient"
 	"go-ai-agent/internal/config"
 	"go-ai-agent/internal/llm"
 	"go-ai-agent/internal/rag"
@@ -97,6 +98,17 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 	fmt.Println("topK:", cfg.TopK)
 	fmt.Println()
 
+	//milvusClient := initMilvusClient(config.MilvusAddr)
+	//d, clean, err := data.NewData(milvusClient)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//defer clean()
+	//usecase := rag.NewMilvusUsecase(data.NewMilvusData(d))
+	//err = usecase.InitMilvusCollections(ctx)
+	//if err != nil {
+	//	panic(err)
+	//}
 	loader := rag.NewTriliumDocumentLoader(map[string]bool{".md": true}, cfg.LimitDocs)
 	docs, err := loader.Load(cfg.DocsPath)
 	if err != nil {
@@ -254,4 +266,16 @@ func previewText(text string, maxRunes int) string {
 		return text
 	}
 	return string(runes[:maxRunes]) + "..."
+}
+
+func initMilvusClient(addr string) *milvusclient.Client {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	client, err := milvusclient.New(ctx, &milvusclient.ClientConfig{
+		Address: addr,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return client
 }
