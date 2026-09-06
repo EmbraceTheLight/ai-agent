@@ -293,7 +293,9 @@ metadata 字段：
 kubectl create namespace milvus
 helm repo add zilliz https://zilliztech.github.io/milvus-helm
 helm repo update
-helm install milvus zilliz/milvus --namespace milvus --set cluster.enabled=false
+helm pull zilliz/milvus --version 5.0.25
+解压 pull 得到的 milvus 压缩包
+
 kubectl get pods,svc -n milvus
 ```
 
