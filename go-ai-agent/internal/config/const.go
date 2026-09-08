@@ -19,3 +19,9 @@ const (
 	AgentQuestion   = "agent_question"
 	GeneralQuestion = "general_question"
 )
+
+// 向量数据库类型
+const (
+	LocalVDB = "local"
+	Milvus   = "milvus"
+)

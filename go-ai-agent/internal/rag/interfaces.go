@@ -23,13 +23,13 @@ type VectorStore interface {
 	// 输入: `Vector` 是 chunk embedding, `chunk` 是包含来源信息的 chunk。
 	// 输出: 成功返回 nil; 向量非法或 chunk 为空时返回错误。
 	// 示例: `Add(Vector{1, 0}, chunk)`。
-	Add(vector Vector, chunk *Chunk) error
+	Add(ctx context.Context, vector Vector, chunk *Chunk) error
 
 	// Search 检索与 queryVector 最相似的 topK 个 chunk。
 	// 输入: `queryVector` 是问题 embedding, `topK` 是返回数量。
 	// 输出: 返回按相似度降序排列的结果。
 	// 示例: `Search(Vector{1, 0}, 2)`。
-	Search(queryVector Vector, topK int) ([]*SearchResult, error)
+	Search(ctx context.Context, queryVector Vector, topK int) ([]*SearchResult, error)
 }
 
 // DocumentLoader 定义文档加载接口。

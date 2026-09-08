@@ -7,6 +7,7 @@ import (
 // MilvusOperation milvus 操作接口
 type MilvusOperation interface {
 	InitCollections(ctx context.Context) error
+	VectorStore
 }
 
 type MilvusUsecase struct {

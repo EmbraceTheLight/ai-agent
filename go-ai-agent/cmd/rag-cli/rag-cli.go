@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/milvus-io/milvus/client/v2/milvusclient"
 	"go-ai-agent/internal/config"
 	"go-ai-agent/internal/llm"
 	"go-ai-agent/internal/rag"
@@ -120,7 +119,19 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 	fmt.Println("加载文档数:", len(docs))
 
 	embedClient := rag.NewEmbeddingClient(cfg.EmbedURL, cfg.EmbedModel)
-	vectorStore := rag.NewVectorStore()
+	vectorStore, cleanup, err := rag.NewVectorStore(config.NewMilvusConfig(config.Milvus, config.MilvusAddr, config.MilvusUser, config.MilvusPassword))
+	if err != nil {
+		cleanup()
+		return err
+	}
+	defer cleanup()
+
+	// 初始化向量数据库
+	err = initMilvusCollection(ctx, vectorStore)
+	if err != nil {
+		return err
+	}
+
 	var totalChunks, totalEmbedded int
 	var lastEmbeddingDimension int
 	for i, doc := range docs {
@@ -148,7 +159,7 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 			indexedChunks = indexedChunks[:len(texts)]
 		}
 		for j, embedding := range embeddings {
-			if err := vectorStore.Add(rag.Vector(embedding), indexedChunks[j]); err != nil {
+			if err := vectorStore.Add(ctx, rag.Vector(embedding), indexedChunks[j]); err != nil {
 				return fmt.Errorf("写入向量库失败: %w", err)
 			}
 		}
@@ -187,7 +198,7 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 		return fmt.Errorf("问题 embedding 数量不匹配: 期望 1, 实际 %d", len(queryEmbeddings))
 	}
 
-	searchResults, err := vectorStore.Search(rag.Vector(queryEmbeddings[0]), cfg.TopK)
+	searchResults, err := vectorStore.Search(ctx, rag.Vector(queryEmbeddings[0]), cfg.TopK)
 	if err != nil {
 		return fmt.Errorf("检索相关 chunk 失败: %w", err)
 	}
@@ -268,14 +279,9 @@ func previewText(text string, maxRunes int) string {
 	return string(runes[:maxRunes]) + "..."
 }
 
-func initMilvusClient(addr string) *milvusclient.Client {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-	client, err := milvusclient.New(ctx, &milvusclient.ClientConfig{
-		Address: addr,
-	})
-	if err != nil {
-		panic(err)
+func initMilvusCollection(ctx context.Context, vs rag.VectorStore) error {
+	if milvusOperation, ok := vs.(rag.MilvusOperation); ok {
+		return milvusOperation.InitCollections(ctx)
 	}
-	return client
+	return nil
 }

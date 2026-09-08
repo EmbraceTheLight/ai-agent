@@ -14,7 +14,7 @@ func TestVectorStoreSearchReturnsTopKInDescendingScore(t *testing.T) {
 	mustAddVector(t, store, Vector{0, 1}, testChunk("notes/c.md", 2, "C orthogonal"))
 	mustAddVector(t, store, Vector{-1, 0}, testChunk("notes/d.md", 3, "D opposite"))
 
-	results, err := store.Search(Vector{1, 0}, 2)
+	results, err := store.Search(nil, Vector{1, 0}, 2)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -46,7 +46,7 @@ func TestVectorStoreSearchReturnsTopKInDescendingScore(t *testing.T) {
 // 避免后续相似度计算出现无效数据。
 func TestVectorStoreAddRejectsEmptyVector(t *testing.T) {
 	store := NewVectorStore()
-	if err := store.Add(Vector{}, testChunk("notes/empty.md", 0, "empty vector")); err == nil {
+	if err := store.Add(nil, Vector{}, testChunk("notes/empty.md", 0, "empty vector")); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -55,7 +55,7 @@ func TestVectorStoreAddRejectsEmptyVector(t *testing.T) {
 // 避免检索结果缺失来源文件和 chunk 序号等引用信息。
 func TestVectorStoreAddRejectsNilChunk(t *testing.T) {
 	store := NewVectorStore()
-	if err := store.Add(Vector{1, 0}, nil); err == nil {
+	if err := store.Add(nil, Vector{1, 0}, nil); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -77,7 +77,7 @@ func TestVectorStoreSearchReturnsErrorForInvalidTopK(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := store.Search(Vector{1, 0}, tt.topK)
+			results, err := store.Search(nil, Vector{1, 0}, tt.topK)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -105,12 +105,12 @@ func TestVectorStoreSearchReturnsErrorForInvalidVectors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store := NewVectorStore()
-			err := store.Add(tt.stored, testChunk("notes/chunk.md", 0, "chunk"))
+			err := store.Add(nil, tt.stored, testChunk("notes/chunk.md", 0, "chunk"))
 			if err != nil {
 				t.Fatalf("add vector failed: %v", err)
 			}
 
-			results, err := store.Search(tt.query, 1)
+			results, err := store.Search(nil, tt.query, 1)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -169,7 +169,7 @@ func testChunk(sourceFile string, index int, content string) *Chunk {
 // 示例: `mustAddVector(t, store, Vector{1, 0}, testChunk("notes/rag.md", 0, "chunk"))`。
 func mustAddVector(t *testing.T, store VectorStore, vec Vector, chunk *Chunk) {
 	t.Helper()
-	if err := store.Add(vec, chunk); err != nil {
+	if err := store.Add(nil, vec, chunk); err != nil {
 		t.Fatalf("add vector failed: %v", err)
 	}
 }

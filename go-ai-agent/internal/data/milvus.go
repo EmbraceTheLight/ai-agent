@@ -28,6 +28,15 @@ type milvusData struct {
 	data *Data
 }
 
+func (md *milvusData) Add(ctx context.Context, vector rag.Vector, chunk *rag.Chunk) error {
+	md.data.client.Insert(ctx, milvusclient.NewColumnBasedInsertOption(config.MilvusCollection))
+}
+
+func (md *milvusData) Search(ctx context.Context, queryVector rag.Vector, topK int) ([]*rag.SearchResult, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewMilvusData(data *Data) rag.MilvusOperation {
 	return &milvusData{
 		data: data,
@@ -47,7 +56,7 @@ func (md *milvusData) InitCollections(ctx context.Context) error {
 	schema.WithField(entity.NewField().WithName("rune_end_offset").WithDataType(entity.FieldTypeInt32))
 	schema.WithField(entity.NewField().WithName("chunk_vector").WithDataType(entity.FieldTypeFloatVector).WithDim(config.EmbeddingDim))
 
-	collectionName := "qwen3_embedding_chunk"
+	collectionName := config.MilvusCollection
 	indexOptions := []milvusclient.CreateIndexOption{
 		milvusclient.NewCreateIndexOption(collectionName, "chunk_vector", index.NewAutoIndex(entity.COSINE)),
 	}

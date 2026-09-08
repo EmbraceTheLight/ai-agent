@@ -2,8 +2,13 @@ package rag
 
 import (
 	"container/heap"
+	"context"
 	"errors"
 	"fmt"
+	"github.com/milvus-io/milvus/client/v2/milvusclient"
+	"go-ai-agent/internal/config"
+	"go-ai-agent/internal/data"
+	"go-ai-agent/internal/utils"
 	"math"
 )
 
@@ -13,15 +18,34 @@ type defaultVectorStore []*Embedding
 // 输入: 无。
 // 输出: 返回一个实现 `VectorStore` 的内存存储。
 // 示例: `store := NewVectorStore()`。
-func NewVectorStore() VectorStore {
-	return &defaultVectorStore{}
+func NewVectorStore(vectorStoreCfg *config.VectorDatabaseConfig) (VectorStore, func(), error) {
+	switch vectorStoreCfg.Type {
+	case config.Milvus:
+		ctx, _ := utils.GetContextWithTimeout(context.Background())
+		milvusClient, err := milvusclient.New(ctx, &milvusclient.ClientConfig{
+			Address:  vectorStoreCfg.Addr,
+			Username: vectorStoreCfg.User,
+			Password: vectorStoreCfg.PassWord,
+		})
+		if err != nil {
+			return nil, func() {}, err
+		}
+		d, cleanup, err := data.NewData(milvusClient)
+		if err != nil {
+			cleanup()
+			return nil, cleanup, err
+		}
+		return data.NewMilvusData(d), cleanup, nil
+	default:
+		return &defaultVectorStore{}, func() {}, nil
+	}
 }
 
 // Add 向内存向量库中添加一条 chunk 向量记录。
 // 输入: `Vector` 是 chunk 的 embedding 向量, `chunk` 是带来源文件和序号的 chunk。
 // 输出: 成功时返回 nil; 向量为空或 chunk 为 nil 时返回错误。
 // 示例: `store.Add(Vector{1, 0}, &Chunk{SourceFile: "notes/rag.md", ChunkIndex: 0, Content: "RAG"})`。
-func (v *defaultVectorStore) Add(vector Vector, chunk *Chunk) error {
+func (v *defaultVectorStore) Add(ctx context.Context, vector Vector, chunk *Chunk) error {
 	if len(vector) == 0 {
 		return errors.New("插入的向量维度为 0")
 	}
@@ -39,7 +63,7 @@ func (v *defaultVectorStore) Add(vector Vector, chunk *Chunk) error {
 // 输入: `queryVector` 是问题的 embedding 向量, `topK` 是需要返回的结果数量。
 // 输出: 返回按余弦相似度降序排列的检索结果; 参数非法或向量无法比较时返回错误。
 // 示例: `store.Search(Vector{1, 0}, 3)` -> 返回分数最高的 3 个 chunk。
-func (v *defaultVectorStore) Search(queryVector Vector, topK int) ([]*SearchResult, error) {
+func (v *defaultVectorStore) Search(ctx context.Context, queryVector Vector, topK int) ([]*SearchResult, error) {
 	if topK <= 0 {
 		return nil, fmt.Errorf("topK 必须大于 0")
 	}
