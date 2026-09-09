@@ -6,6 +6,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/milvus-io/milvus/client/v2 v2.6.5
 	github.com/openai/openai-go/v3 v3.44.0
+	github.com/yitter/idgenerator-go v1.3.3
 )
 
 require (

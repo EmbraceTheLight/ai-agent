@@ -1,6 +1,7 @@
 package rag
 
 import (
+	"go-ai-agent/internal/config"
 	"math"
 	"testing"
 )
@@ -8,13 +9,13 @@ import (
 // TestVectorStoreSearchReturnsTopKInDescendingScore 测试内存向量库会返回相似度最高的 topK 结果,
 // 且结果按余弦相似度从高到低排序。
 func TestVectorStoreSearchReturnsTopKInDescendingScore(t *testing.T) {
-	store := NewVectorStore()
+	store := newMemoryVectorStore(t)
 	mustAddVector(t, store, Vector{1, 0}, testChunk("notes/a.md", 0, "A exact match"))
 	mustAddVector(t, store, Vector{0.8, 0.2}, testChunk("notes/b.md", 1, "B close match"))
 	mustAddVector(t, store, Vector{0, 1}, testChunk("notes/c.md", 2, "C orthogonal"))
 	mustAddVector(t, store, Vector{-1, 0}, testChunk("notes/d.md", 3, "D opposite"))
 
-	results, err := store.Search(Vector{1, 0}, 2)
+	results, err := store.Search(nil, Vector{1, 0}, 2)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -45,8 +46,8 @@ func TestVectorStoreSearchReturnsTopKInDescendingScore(t *testing.T) {
 // TestVectorStoreAddRejectsEmptyVector 测试插入空向量时会返回错误,
 // 避免后续相似度计算出现无效数据。
 func TestVectorStoreAddRejectsEmptyVector(t *testing.T) {
-	store := NewVectorStore()
-	if err := store.Add(Vector{}, testChunk("notes/empty.md", 0, "empty vector")); err == nil {
+	store := newMemoryVectorStore(t)
+	if err := store.Add(nil, Vector{}, testChunk("notes/empty.md", 0, "empty vector")); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -54,8 +55,8 @@ func TestVectorStoreAddRejectsEmptyVector(t *testing.T) {
 // TestVectorStoreAddRejectsNilChunk 测试插入 nil chunk 时会返回错误,
 // 避免检索结果缺失来源文件和 chunk 序号等引用信息。
 func TestVectorStoreAddRejectsNilChunk(t *testing.T) {
-	store := NewVectorStore()
-	if err := store.Add(Vector{1, 0}, nil); err == nil {
+	store := newMemoryVectorStore(t)
+	if err := store.Add(nil, Vector{1, 0}, nil); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
@@ -63,7 +64,7 @@ func TestVectorStoreAddRejectsNilChunk(t *testing.T) {
 // TestVectorStoreSearchReturnsErrorForInvalidTopK 测试 topK 非法或超过向量库大小时,
 // Search 会返回错误而不是返回不明确的结果。
 func TestVectorStoreSearchReturnsErrorForInvalidTopK(t *testing.T) {
-	store := NewVectorStore()
+	store := newMemoryVectorStore(t)
 	mustAddVector(t, store, Vector{1, 0}, testChunk("notes/a.md", 0, "A"))
 
 	tests := []struct {
@@ -77,7 +78,7 @@ func TestVectorStoreSearchReturnsErrorForInvalidTopK(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := store.Search(Vector{1, 0}, tt.topK)
+			results, err := store.Search(nil, Vector{1, 0}, tt.topK)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -104,13 +105,13 @@ func TestVectorStoreSearchReturnsErrorForInvalidVectors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := NewVectorStore()
-			err := store.Add(tt.stored, testChunk("notes/chunk.md", 0, "chunk"))
+			store := newMemoryVectorStore(t)
+			err := store.Add(nil, tt.stored, testChunk("notes/chunk.md", 0, "chunk"))
 			if err != nil {
 				t.Fatalf("add vector failed: %v", err)
 			}
 
-			results, err := store.Search(tt.query, 1)
+			results, err := store.Search(nil, tt.query, 1)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -149,6 +150,22 @@ func TestCosineSimilarity(t *testing.T) {
 	}
 }
 
+// newMemoryVectorStore 创建用于测试的内存向量库。
+// 输入: `t` 是当前测试对象。
+// 输出: 返回 LocalVDB 配置下创建的 `VectorStore`。
+// 示例: `store := newMemoryVectorStore(t)`。
+func newMemoryVectorStore(t *testing.T) VectorStore {
+	t.Helper()
+
+	store, cleanup, err := NewVectorStore(&config.VectorDatabaseConfig{Type: config.LocalVDB})
+	if err != nil {
+		t.Fatalf("create memory vector store failed: %v", err)
+	}
+	t.Cleanup(cleanup)
+
+	return store
+}
+
 // testChunk 创建带来源信息的测试 chunk。
 // 输入: `sourceFile` 是源文件路径, `index` 是 chunk 序号, `content` 是 chunk 文本。
 // 输出: 返回可写入向量库的 `*Chunk`。
@@ -156,10 +173,10 @@ func TestCosineSimilarity(t *testing.T) {
 func testChunk(sourceFile string, index int, content string) *Chunk {
 	return &Chunk{
 		SourceFile:      sourceFile,
-		ChunkIndex:      index,
+		ChunkIndex:      int64(index),
 		Content:         content,
 		RuneStartOffset: 0,
-		RuneEndOffset:   len([]rune(content)),
+		RuneEndOffset:   int64(len([]rune(content))),
 	}
 }
 
@@ -169,7 +186,7 @@ func testChunk(sourceFile string, index int, content string) *Chunk {
 // 示例: `mustAddVector(t, store, Vector{1, 0}, testChunk("notes/rag.md", 0, "chunk"))`。
 func mustAddVector(t *testing.T, store VectorStore, vec Vector, chunk *Chunk) {
 	t.Helper()
-	if err := store.Add(vec, chunk); err != nil {
+	if err := store.Add(nil, vec, chunk); err != nil {
 		t.Fatalf("add vector failed: %v", err)
 	}
 }

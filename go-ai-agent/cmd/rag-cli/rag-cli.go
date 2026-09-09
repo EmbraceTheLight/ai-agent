@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/milvus-io/milvus/client/v2/milvusclient"
 	"go-ai-agent/internal/config"
 	"go-ai-agent/internal/llm"
 	"go-ai-agent/internal/rag"
@@ -26,6 +25,7 @@ type ragCLIConfig struct {
 	Question    string
 	TopK        int
 	Model       string
+	Store       string
 }
 
 // main 启动 RAG CLI。
@@ -66,6 +66,7 @@ func parseFlags() ragCLIConfig {
 	flag.StringVar(&cfg.Question, "question", "", "需要基于文档回答的问题; 也可以放在命令末尾")
 	flag.IntVar(&cfg.TopK, "topK", 3, "检索时返回的最相关 chunk 数")
 	flag.StringVar(&cfg.Model, "model", config.OpenaiModel, "用于生成最终 RAG 回答的模型名称")
+	flag.StringVar(&cfg.Store, "store", "memory", "存储方式, 支持 milvus 和内存存储")
 	flag.Parse()
 	if cfg.Question == "" {
 		cfg.Question = strings.TrimSpace(strings.Join(flag.Args(), " "))
@@ -98,17 +99,14 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 	fmt.Println("topK:", cfg.TopK)
 	fmt.Println()
 
-	//milvusClient := initMilvusClient(config.MilvusAddr)
-	//d, clean, err := data.NewData(milvusClient)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//defer clean()
-	//usecase := rag.NewMilvusUsecase(data.NewMilvusData(d))
-	//err = usecase.InitMilvusCollections(ctx)
-	//if err != nil {
-	//	panic(err)
-	//}
+	embedClient := rag.NewEmbeddingClient(cfg.EmbedURL, cfg.EmbedModel)
+	vectorStore, cleanup, err := rag.NewVectorStore(config.NewMilvusConfig(cfg.Store, config.MilvusAddr, config.MilvusUser, config.MilvusPassword))
+	if err != nil {
+		cleanup()
+		return err
+	}
+	defer cleanup()
+
 	loader := rag.NewTriliumDocumentLoader(map[string]bool{".md": true}, cfg.LimitDocs)
 	docs, err := loader.Load(cfg.DocsPath)
 	if err != nil {
@@ -119,8 +117,12 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 	}
 	fmt.Println("加载文档数:", len(docs))
 
-	embedClient := rag.NewEmbeddingClient(cfg.EmbedURL, cfg.EmbedModel)
-	vectorStore := rag.NewVectorStore()
+	// 初始化向量数据库
+	err = initMilvusCollection(ctx, vectorStore)
+	if err != nil {
+		return err
+	}
+
 	var totalChunks, totalEmbedded int
 	var lastEmbeddingDimension int
 	for i, doc := range docs {
@@ -148,7 +150,7 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 			indexedChunks = indexedChunks[:len(texts)]
 		}
 		for j, embedding := range embeddings {
-			if err := vectorStore.Add(rag.Vector(embedding), indexedChunks[j]); err != nil {
+			if err := vectorStore.Add(ctx, rag.Vector(embedding), indexedChunks[j]); err != nil {
 				return fmt.Errorf("写入向量库失败: %w", err)
 			}
 		}
@@ -187,7 +189,7 @@ func run(ctx context.Context, cfg ragCLIConfig) error {
 		return fmt.Errorf("问题 embedding 数量不匹配: 期望 1, 实际 %d", len(queryEmbeddings))
 	}
 
-	searchResults, err := vectorStore.Search(rag.Vector(queryEmbeddings[0]), cfg.TopK)
+	searchResults, err := vectorStore.Search(ctx, rag.Vector(queryEmbeddings[0]), cfg.TopK)
 	if err != nil {
 		return fmt.Errorf("检索相关 chunk 失败: %w", err)
 	}
@@ -248,8 +250,8 @@ func chunkTexts(chunks []*rag.Chunk, limit int) []string {
 // embeddingDimension 获取 embedding 向量维度。
 // 输入: `embeddings` 是 embedding 向量列表。
 // 输出: 返回第一个 embedding 的维度; 列表为空时返回 0。
-// 示例: `embeddingDimension([][]float64{{0.1, 0.2}})` -> 返回 `2`。
-func embeddingDimension(embeddings [][]float64) int {
+// 示例: `embeddingDimension([][]float32{{0.1, 0.2}})` -> 返回 `2`。
+func embeddingDimension(embeddings [][]float32) int {
 	if len(embeddings) == 0 {
 		return 0
 	}
@@ -268,14 +270,9 @@ func previewText(text string, maxRunes int) string {
 	return string(runes[:maxRunes]) + "..."
 }
 
-func initMilvusClient(addr string) *milvusclient.Client {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-	client, err := milvusclient.New(ctx, &milvusclient.ClientConfig{
-		Address: addr,
-	})
-	if err != nil {
-		panic(err)
+func initMilvusCollection(ctx context.Context, vectorStore rag.VectorStore) error {
+	if milvusVS, ok := vectorStore.(*rag.MilvusVS); ok {
+		return milvusVS.InitCollections(ctx)
 	}
-	return client
+	return nil
 }

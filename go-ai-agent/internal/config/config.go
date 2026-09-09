@@ -2,12 +2,13 @@ package config
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -19,8 +20,18 @@ var (
 	EmbeddingModel   string
 	EmbeddingDim     int64
 
-	MilvusAddr string
+	MilvusAddr       string
+	MilvusUser       string
+	MilvusPassword   string
+	MilvusCollection string
 )
+
+type VectorDatabaseConfig struct {
+	Type     string
+	Addr     string
+	User     string
+	PassWord string
+}
 
 func init() {
 	initEnvVariable()
@@ -37,10 +48,19 @@ func initEnvVariable() {
 	OpenaiApiKey = strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
 	OpenaiBaseURL = strings.TrimRight(strings.TrimSpace(os.Getenv("OPENAI_BASE_URL")), "/")
 	OpenaiModel = firstNonEmpty(os.Getenv("OPENAI_MODEL"), "gpt-5.5")
+
 	EmbeddingBaseURL = strings.TrimRight(strings.TrimSpace(os.Getenv("EMBEDDING_BASE_URL")), "/")
 	EmbeddingModel = firstNonEmpty(os.Getenv("EMBEDDING_MODEL"), "qwen3-embedding:0.6b")
 	EmbeddingDim = getIntTypeEnv("EMBEDDING_DIM")
-	MilvusAddr = firstNonEmpty(os.Getenv("MILVUS_ADDR"), "localhost:19530")
+
+	MilvusAddr = os.Getenv("MILVUS_ADDR")
+	MilvusUser = os.Getenv("MILVUS_USER")
+	MilvusPassword = os.Getenv("MILVUS_PASSWORD")
+	MilvusCollection = os.Getenv("MILVUS_COLLECTION")
+}
+
+func NewMilvusConfig(typ string, addr, username, password string) *VectorDatabaseConfig {
+	return &VectorDatabaseConfig{Type: typ, Addr: addr, User: username, PassWord: password}
 }
 
 // firstNonEmpty 获取 value, 若该值为空, 则返回 fallback

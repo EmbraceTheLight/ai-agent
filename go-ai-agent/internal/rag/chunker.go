@@ -36,9 +36,9 @@ func ChunkDocument(doc *Document, size, overlap int) ([]*Chunk, error) {
 		chunk := &Chunk{
 			Title:           doc.Title,
 			SourceFile:      doc.SourcePath,
-			RuneStartOffset: start,
-			RuneEndOffset:   end,
-			ChunkIndex:      chunkIdx,
+			RuneStartOffset: int64(start),
+			RuneEndOffset:   int64(end),
+			ChunkIndex:      int64(chunkIdx),
 			CreatedAt:       timestamp,
 			UpdatedAt:       timestamp,
 		}

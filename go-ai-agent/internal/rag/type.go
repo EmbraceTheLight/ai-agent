@@ -27,18 +27,18 @@ type EmbedReq struct {
 // EmbedResp 描述 embedding provider 返回的响应结构。
 // 输入: 由 HTTP JSON 响应反序列化得到。
 // 输出: `EmbeddingsData` 保存与输入文本一一对应的向量。
-// 示例: `EmbedResp{EmbeddingsData: [][]float64{{0.1, 0.2}}}`。
+// 示例: `EmbedResp{EmbeddingsData: [][]float32{{0.1, 0.2}}}`。
 type EmbedResp struct {
-	EmbeddingsData [][]float64 `json:"embeddings"`
+	EmbeddingsData [][]float32 `json:"embeddings"`
 }
 
 /* other data structure */
 
 // Vector 表示一个 embedding 向量。
-// 输入: 通常来自 embedding provider 返回的 `[]float64`。
+// 输入: 通常来自 embedding provider 返回的 `[]float32`。
 // 输出: 用于向量库保存和相似度计算。
 // 示例: `Vector{0.1, 0.2, 0.3}`。
-type Vector []float64
+type Vector []float32
 
 // Embedding 存放 chunk 元数据及其向量。
 // 输入: `Chunk` 是包含来源文件、序号和内容的 chunk, `Vector` 是该 chunk 对应的 embedding。
@@ -66,7 +66,7 @@ type Document struct {
 type Chunk struct {
 	SourceFile string // 源文件路径
 	Title      string // markdown 文件标题, Trilium 中只有标题格式为 `# <title>`
-	ChunkIndex int    // Chunk 索引
+	ChunkIndex int64  // Chunk 索引
 	Content    string // 分块内容
 	CreatedAt  int64  // 创建时间时间戳
 	UpdatedAt  int64  // 更新时间时间戳
@@ -74,8 +74,8 @@ type Chunk struct {
 	// 分块起始偏移量, 该偏移量为形式上的偏移量, 并非按照字节偏移.
 	// 对于存在 rune 的文本, 该偏移量可能无法直接用于切片操作
 	// 如 "你好x", 其对应的 x 的 RuneStartOffset 偏移量为 2, 而非字节偏移 6。
-	RuneStartOffset int
-	RuneEndOffset   int // 分块终止偏移量
+	RuneStartOffset int64
+	RuneEndOffset   int64 // 分块终止偏移量
 }
 
 // SearchResult 表示一次向量检索命中的结果。
