@@ -1,0 +1,15 @@
+{"question_id":"q1","question_content":"0525 周一主要处理了哪些问题？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/0525周一.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q2","question_content":"周二修正了 source.outlet.state 的什么问题？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/周二.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q3","question_content":"周三记录的未识别符号问题涉及哪个引用？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/周三.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q4","question_content":"周四完成了哪项与加密授权有关的测试？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/周四.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q5","question_content":"Dymola 加密模型库时，授权属性中需要指定哪些信息？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/周四/加密 & 授权模型库.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q6","question_content":"如何把其他机器的 MAC 地址转换为 host-id？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/周四/加密 & 授权模型库.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q7","question_content":"周五下午继续理解平坦化流程时，列出了哪些辅助文件？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/周五.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q8","question_content":"frontend-flat-learning-todo 的阶段 05 主要研究什么？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/周五/frontend-flat-learning-todo.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q9","question_content":"待办事项中，UserInteraction.Examples.TestFilter 存在什么问题？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/待办事项.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q10","question_content":"第四周关于 WaterHammer 的问题，周一发现了什么，周三又记录了什么？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/0525周一.md","testdata/documents/work_notes_May/五月/第四周/周三.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q11","question_content":"第四周是否完成了 PostgreSQL 持久化？","expected_sources":[],"min_score":0.40,"should_answer":false}
+{"question_id":"q12","question_content":"第四周是否完成了 Redis 集群部署？","expected_sources":[],"min_score":0.40,"should_answer":false}
+{"question_id":"q13","question_content":"第四周是否接入了 Milvus VectorStore 并创建了 collection？","expected_sources":[],"min_score":0.40,"should_answer":false}
+{"question_id":"q14","question_content":"第四周的待办事项是否已经全部完成？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/待办事项.md"],"min_score":0.40,"should_answer":true}
+{"question_id":"q15","question_content":"Dymola 加密模型库时，授权属性中需要指定哪些信息？","expected_sources":["testdata/documents/work_notes_May/五月/第四周/周四/加密 & 授权模型库.md"],"min_score":0.95,"should_answer":false}
