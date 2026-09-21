@@ -11,17 +11,18 @@ import (
 )
 
 type ragEvalConfig struct {
-	DocsPath    string
-	CasesPath   string
-	ChunkSize   int
-	Overlap     int
-	EmbedURL    string
-	EmbedModel  string
-	LimitDocs   int
-	LimitChunks int
-	Timeout     time.Duration
-	TopK        int
-	Store       string
+	DocsPath        string
+	CasesPath       string
+	ChunkSize       int
+	Overlap         int
+	EmbedURL        string
+	EmbedModel      string
+	LimitDocs       int
+	LimitChunks     int
+	Timeout         time.Duration
+	TopK            int
+	Store           string
+	ResetCollection bool
 }
 
 // main 启动离线 RAG Eval。
@@ -61,6 +62,7 @@ func parseFlags() ragEvalConfig {
 	flag.DurationVar(&cfg.Timeout, "timeout", config.RequestTimeout, "整个 Eval 流程的超时时间")
 	flag.IntVar(&cfg.TopK, "topK", 3, "每个问题检索的 topK chunk 数")
 	flag.StringVar(&cfg.Store, "store", "memory", "存储方式, 支持 milvus 和内存存储")
+	flag.BoolVar(&cfg.ResetCollection, "resetCollection", true, "使用 Milvus 时是否在 Eval 前删除并重建 collection")
 	flag.Parse()
 
 	return cfg
@@ -104,7 +106,7 @@ func run(ctx context.Context, cfg ragEvalConfig) error {
 	}
 	defer cleanup()
 
-	if err := initMilvusCollection(ctx, vectorStore); err != nil {
+	if err := prepareVectorStore(ctx, vectorStore, cfg.ResetCollection); err != nil {
 		return err
 	}
 
@@ -126,6 +128,9 @@ func run(ctx context.Context, cfg ragEvalConfig) error {
 	fmt.Println("文档路径:", cfg.DocsPath)
 	fmt.Println("Eval case:", cfg.CasesPath)
 	fmt.Println("存储方式:", cfg.Store)
+	if cfg.Store == config.Milvus {
+		fmt.Println("重建 Milvus collection:", cfg.ResetCollection)
+	}
 	fmt.Println("chunk size:", cfg.ChunkSize)
 	fmt.Println("overlap:", cfg.Overlap)
 	fmt.Println("topK:", cfg.TopK)
@@ -288,12 +293,15 @@ func chunkTexts(chunks []*rag.Chunk, limit int) []string {
 	return texts
 }
 
-// initMilvusCollection 初始化 Milvus collection; 内存向量库不需要初始化。
-// 输入: `vectorStore` 是当前使用的向量库。
-// 输出: Milvus collection 初始化成功或无需初始化时返回 nil。
-// 示例: `initMilvusCollection(ctx, store)`。
-func initMilvusCollection(ctx context.Context, vectorStore rag.VectorStore) error {
+// prepareVectorStore 为离线 Eval 准备向量库; 内存向量库不需要额外处理。
+// 输入: `vectorStore` 是当前向量库, `resetCollection` 控制是否重建 Milvus collection。
+// 输出: Milvus collection 成功重建或初始化时返回 nil; 准备失败时返回错误。
+// 示例: `prepareVectorStore(ctx, store, true)` -> Eval 前重建 Milvus collection。
+func prepareVectorStore(ctx context.Context, vectorStore rag.VectorStore, resetCollection bool) error {
 	if milvusVS, ok := vectorStore.(*rag.MilvusVS); ok {
+		if resetCollection {
+			return milvusVS.ResetCollection(ctx)
+		}
 		return milvusVS.InitCollections(ctx)
 	}
 	return nil
