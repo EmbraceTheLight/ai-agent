@@ -7,7 +7,6 @@ import (
 
 	"go-ai-agent/app/rag-api/internal/conf"
 
-	"github.com/go-kratos/kratos/contrib/otel/v3/tracing"
 	"github.com/go-kratos/kratos/v3"
 	"github.com/go-kratos/kratos/v3/config"
 	"github.com/go-kratos/kratos/v3/config/env"
@@ -15,8 +14,9 @@ import (
 	"github.com/go-kratos/kratos/v3/log"
 	"github.com/go-kratos/kratos/v3/transport/grpc"
 	"github.com/go-kratos/kratos/v3/transport/http"
-
 	_ "go.uber.org/automaxprocs"
+	"go.uber.org/zap"
+	"go.uber.org/zap/exp/zapslog"
 )
 
 // go build -ldflags "-X main.Version=x.y.z"
@@ -51,18 +51,11 @@ func newApp(logger *slog.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 
 func main() {
 	flag.Parse()
-	logger := log.NewLogger(
-		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			AddSource: true,
-			Level:     slog.LevelInfo,
-		}),
-		log.WithExtractor(tracing.TraceAttrs),
-	).With(
-		slog.String("service.id", id),
-		slog.String("service.name", Name),
-		slog.String("service.version", Version),
-	)
-	log.SetDefault(logger)
+	logger, cleanupLogger, err := newLogger()
+	if err != nil {
+		panic(err)
+	}
+	defer cleanupLogger()
 	c := config.New(
 		config.WithSource(
 			file.NewSource(flagconf),
@@ -90,4 +83,36 @@ func main() {
 	if err := app.Run(); err != nil {
 		panic(err)
 	}
+}
+
+// newLogger 底层 log 替换为 zap
+func newLogger() (*slog.Logger, func(), error) {
+	zapConfig := zap.NewProductionConfig()
+	zapConfig.OutputPaths = []string{"stdout", "log/log.txt"}
+	zapConfig.ErrorOutputPaths = []string{"stderr", "log/error.txt"}
+
+	zapLogger, err := zapConfig.Build()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	handler := zapslog.NewHandler(
+		zapLogger.Core(),
+		zapslog.WithCaller(true),
+	)
+
+	logger := log.NewLogger(handler).With(
+		slog.String("service.id", id),
+		slog.String("service.name", Name),
+		slog.String("service.version", Version),
+	)
+
+	log.SetDefault(logger)
+	slog.SetDefault(logger)
+
+	cleanup := func() {
+		_ = zapLogger.Sync()
+	}
+
+	return logger, cleanup, nil
 }

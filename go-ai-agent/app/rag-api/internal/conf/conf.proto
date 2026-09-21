@@ -26,23 +26,24 @@ message Server {
 }
 
 message Data {
-  message Database {
-    // Driver name registered with database/sql, e.g. "mysql".
-    string driver = 1;
-    // Driver-specific DSN. Keep credentials out of version control.
-    string source = 2;
-    // Log every generated statement. Development only.
-    bool debug = 3;
-    // Create or update tables from the ent schema on startup. Leave false in
-    // production and apply migrations as a separate, reviewed step.
-    bool auto_migrate = 4;
+  message Model {
+    string provider = 1;
+    string api_key = 2;
+    string base_url = 3;
+    string model_name = 4;
   }
-  message Redis {
-    string network = 1;
-    string addr = 2;
-    google.protobuf.Duration read_timeout = 3;
-    google.protobuf.Duration write_timeout = 4;
+  message Milvus {
+    string addr = 1;
+    string collection = 2;
+    string username = 3;
+    string password = 4;
   }
-  Database database = 1;
-  Redis redis = 2;
+  message Embedder {
+    string base_url = 1;
+    string model = 2;
+    int32 dim = 3;
+  }
+  Model model = 1;
+  Milvus milvus = 2;
+  Embedder embedder = 3;
 }

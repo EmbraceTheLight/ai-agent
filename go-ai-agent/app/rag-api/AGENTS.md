@@ -139,4 +139,4 @@ Regenerate via `make api`, `make config`, or `make all`; never hand-edit
 - Conventional Commits: `feat:`, `fix:`, `refactor:`, `chore(deps):`,
   `docs:`, `test:`. Regenerated files belong in the same commit as
   their source.
-- Never commit real credentials in `configs/config.yaml`.
+- Never commit real credentials in `configs/config_example.yaml`.

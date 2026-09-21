@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "app/rag-api/api/rag/common;commonv1";
+
+message CommonResp {
+  int32 status_code = 1;
+  string msg = 2;
+  string err_msg = 3;
+}

@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package rag.v1;
+
+import "google/api/annotations.proto";
+import "common.proto";
+
+option go_package = "app/rag-api/api/rag/v1;ragv1";
+
+service RagService {
+  rpc Health(HealthRequest) returns (HealthResponse) {
+    option (google.api.http) = {get: "/api/v1/health"};
+  }
+
+  rpc ImportDocument(ImportDocumentRequest) returns (ImportDocumentResponse) {
+    option (google.api.http) = {get: "/api/v1/documents/import"};
+  }
+
+  rpc Ask(AskRequest) returns (AskResponse) {
+    option (google.api.http) = {get: "/api/v1/ask"};
+  }
+}
+
+message HealthRequest {}
+message HealthResponse {
+  common.CommonResp resp = 1;
+}
+
+message ImportDocumentRequest {
+  string file_path = 1;
+}
+message ImportDocumentResponse {
+  common.CommonResp resp = 1;
+}
+
+message AskRequest {
+  string question = 1;
+  int32 top_k = 2;
+}
+message AskResponse {
+  common.CommonResp resp = 1;
+  string answer = 2;
+}

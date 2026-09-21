@@ -1,17 +1,25 @@
 GOHOSTOS:=$(shell go env GOHOSTOS)
 GOPATH:=$(shell go env GOPATH)
 VERSION=$(shell git describe --tags --always)
+WIRE_VERSION:=v0.7.0
+BUF_VERSION:=v1.73.0
 
 .PHONY: init
 # init env
 init:
-	go install github.com/google/wire/cmd/wire@latest
-	go install github.com/bufbuild/buf/cmd/buf@latest
+	go install github.com/google/wire/cmd/wire@$(WIRE_VERSION)
+	go install github.com/bufbuild/buf/cmd/buf@$(BUF_VERSION)
 
 .PHONY: config
 # generate internal proto
 config:
 	buf generate --template buf.gen.config.yaml
+
+.PHONY: proto
+# generate all protobuf files next to their source files
+proto:
+	$(MAKE) api
+	$(MAKE) config
 
 .PHONY: api
 # generate api proto

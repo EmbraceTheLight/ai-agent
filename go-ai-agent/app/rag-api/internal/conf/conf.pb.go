@@ -128,8 +128,9 @@ func (x *Server) GetGrpc() *Server_GRPC {
 
 type Data struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Database      *Data_Database         `protobuf:"bytes,1,opt,name=database,proto3" json:"database,omitempty"`
-	Redis         *Data_Redis            `protobuf:"bytes,2,opt,name=redis,proto3" json:"redis,omitempty"`
+	Model         *Data_Model            `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
+	Milvus        *Data_Milvus           `protobuf:"bytes,2,opt,name=milvus,proto3" json:"milvus,omitempty"`
+	Embedder      *Data_Embedder         `protobuf:"bytes,3,opt,name=embedder,proto3" json:"embedder,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -164,16 +165,23 @@ func (*Data) Descriptor() ([]byte, []int) {
 	return file_conf_conf_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Data) GetDatabase() *Data_Database {
+func (x *Data) GetModel() *Data_Model {
 	if x != nil {
-		return x.Database
+		return x.Model
 	}
 	return nil
 }
 
-func (x *Data) GetRedis() *Data_Redis {
+func (x *Data) GetMilvus() *Data_Milvus {
 	if x != nil {
-		return x.Redis
+		return x.Milvus
+	}
+	return nil
+}
+
+func (x *Data) GetEmbedder() *Data_Embedder {
+	if x != nil {
+		return x.Embedder
 	}
 	return nil
 }
@@ -298,35 +306,30 @@ func (x *Server_GRPC) GetTimeout() *durationpb.Duration {
 	return nil
 }
 
-type Data_Database struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Driver name registered with database/sql, e.g. "mysql".
-	Driver string `protobuf:"bytes,1,opt,name=driver,proto3" json:"driver,omitempty"`
-	// Driver-specific DSN. Keep credentials out of version control.
-	Source string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
-	// Log every generated statement. Development only.
-	Debug bool `protobuf:"varint,3,opt,name=debug,proto3" json:"debug,omitempty"`
-	// Create or update tables from the ent schema on startup. Leave false in
-	// production and apply migrations as a separate, reviewed step.
-	AutoMigrate   bool `protobuf:"varint,4,opt,name=auto_migrate,json=autoMigrate,proto3" json:"auto_migrate,omitempty"`
+type Data_Model struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Provider      string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	ApiKey        string                 `protobuf:"bytes,2,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	BaseUrl       string                 `protobuf:"bytes,3,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
+	ModelName     string                 `protobuf:"bytes,4,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Data_Database) Reset() {
-	*x = Data_Database{}
+func (x *Data_Model) Reset() {
+	*x = Data_Model{}
 	mi := &file_conf_conf_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Data_Database) String() string {
+func (x *Data_Model) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Data_Database) ProtoMessage() {}
+func (*Data_Model) ProtoMessage() {}
 
-func (x *Data_Database) ProtoReflect() protoreflect.Message {
+func (x *Data_Model) ProtoReflect() protoreflect.Message {
 	mi := &file_conf_conf_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -338,63 +341,63 @@ func (x *Data_Database) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Data_Database.ProtoReflect.Descriptor instead.
-func (*Data_Database) Descriptor() ([]byte, []int) {
+// Deprecated: Use Data_Model.ProtoReflect.Descriptor instead.
+func (*Data_Model) Descriptor() ([]byte, []int) {
 	return file_conf_conf_proto_rawDescGZIP(), []int{2, 0}
 }
 
-func (x *Data_Database) GetDriver() string {
+func (x *Data_Model) GetProvider() string {
 	if x != nil {
-		return x.Driver
+		return x.Provider
 	}
 	return ""
 }
 
-func (x *Data_Database) GetSource() string {
+func (x *Data_Model) GetApiKey() string {
 	if x != nil {
-		return x.Source
+		return x.ApiKey
 	}
 	return ""
 }
 
-func (x *Data_Database) GetDebug() bool {
+func (x *Data_Model) GetBaseUrl() string {
 	if x != nil {
-		return x.Debug
+		return x.BaseUrl
 	}
-	return false
+	return ""
 }
 
-func (x *Data_Database) GetAutoMigrate() bool {
+func (x *Data_Model) GetModelName() string {
 	if x != nil {
-		return x.AutoMigrate
+		return x.ModelName
 	}
-	return false
+	return ""
 }
 
-type Data_Redis struct {
+type Data_Milvus struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Network       string                 `protobuf:"bytes,1,opt,name=network,proto3" json:"network,omitempty"`
-	Addr          string                 `protobuf:"bytes,2,opt,name=addr,proto3" json:"addr,omitempty"`
-	ReadTimeout   *durationpb.Duration   `protobuf:"bytes,3,opt,name=read_timeout,json=readTimeout,proto3" json:"read_timeout,omitempty"`
-	WriteTimeout  *durationpb.Duration   `protobuf:"bytes,4,opt,name=write_timeout,json=writeTimeout,proto3" json:"write_timeout,omitempty"`
+	Addr          string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
+	Collection    string                 `protobuf:"bytes,2,opt,name=collection,proto3" json:"collection,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	Password      string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Data_Redis) Reset() {
-	*x = Data_Redis{}
+func (x *Data_Milvus) Reset() {
+	*x = Data_Milvus{}
 	mi := &file_conf_conf_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Data_Redis) String() string {
+func (x *Data_Milvus) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Data_Redis) ProtoMessage() {}
+func (*Data_Milvus) ProtoMessage() {}
 
-func (x *Data_Redis) ProtoReflect() protoreflect.Message {
+func (x *Data_Milvus) ProtoReflect() protoreflect.Message {
 	mi := &file_conf_conf_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -406,37 +409,97 @@ func (x *Data_Redis) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Data_Redis.ProtoReflect.Descriptor instead.
-func (*Data_Redis) Descriptor() ([]byte, []int) {
+// Deprecated: Use Data_Milvus.ProtoReflect.Descriptor instead.
+func (*Data_Milvus) Descriptor() ([]byte, []int) {
 	return file_conf_conf_proto_rawDescGZIP(), []int{2, 1}
 }
 
-func (x *Data_Redis) GetNetwork() string {
-	if x != nil {
-		return x.Network
-	}
-	return ""
-}
-
-func (x *Data_Redis) GetAddr() string {
+func (x *Data_Milvus) GetAddr() string {
 	if x != nil {
 		return x.Addr
 	}
 	return ""
 }
 
-func (x *Data_Redis) GetReadTimeout() *durationpb.Duration {
+func (x *Data_Milvus) GetCollection() string {
 	if x != nil {
-		return x.ReadTimeout
+		return x.Collection
 	}
-	return nil
+	return ""
 }
 
-func (x *Data_Redis) GetWriteTimeout() *durationpb.Duration {
+func (x *Data_Milvus) GetUsername() string {
 	if x != nil {
-		return x.WriteTimeout
+		return x.Username
 	}
-	return nil
+	return ""
+}
+
+func (x *Data_Milvus) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+type Data_Embedder struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BaseUrl       string                 `protobuf:"bytes,1,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
+	Model         string                 `protobuf:"bytes,2,opt,name=model,proto3" json:"model,omitempty"`
+	Dim           int32                  `protobuf:"varint,3,opt,name=dim,proto3" json:"dim,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Data_Embedder) Reset() {
+	*x = Data_Embedder{}
+	mi := &file_conf_conf_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Data_Embedder) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Data_Embedder) ProtoMessage() {}
+
+func (x *Data_Embedder) ProtoReflect() protoreflect.Message {
+	mi := &file_conf_conf_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Data_Embedder.ProtoReflect.Descriptor instead.
+func (*Data_Embedder) Descriptor() ([]byte, []int) {
+	return file_conf_conf_proto_rawDescGZIP(), []int{2, 2}
+}
+
+func (x *Data_Embedder) GetBaseUrl() string {
+	if x != nil {
+		return x.BaseUrl
+	}
+	return ""
+}
+
+func (x *Data_Embedder) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *Data_Embedder) GetDim() int32 {
+	if x != nil {
+		return x.Dim
+	}
+	return 0
 }
 
 var File_conf_conf_proto protoreflect.FileDescriptor
@@ -458,20 +521,28 @@ const file_conf_conf_proto_rawDesc = "" +
 	"\x04GRPC\x12\x18\n" +
 	"\anetwork\x18\x01 \x01(\tR\anetwork\x12\x12\n" +
 	"\x04addr\x18\x02 \x01(\tR\x04addr\x123\n" +
-	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\x96\x03\n" +
-	"\x04Data\x125\n" +
-	"\bdatabase\x18\x01 \x01(\v2\x19.kratos.api.Data.DatabaseR\bdatabase\x12,\n" +
-	"\x05redis\x18\x02 \x01(\v2\x16.kratos.api.Data.RedisR\x05redis\x1as\n" +
-	"\bDatabase\x12\x16\n" +
-	"\x06driver\x18\x01 \x01(\tR\x06driver\x12\x16\n" +
-	"\x06source\x18\x02 \x01(\tR\x06source\x12\x14\n" +
-	"\x05debug\x18\x03 \x01(\bR\x05debug\x12!\n" +
-	"\fauto_migrate\x18\x04 \x01(\bR\vautoMigrate\x1a\xb3\x01\n" +
-	"\x05Redis\x12\x18\n" +
-	"\anetwork\x18\x01 \x01(\tR\anetwork\x12\x12\n" +
-	"\x04addr\x18\x02 \x01(\tR\x04addr\x12<\n" +
-	"\fread_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\vreadTimeout\x12>\n" +
-	"\rwrite_timeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\fwriteTimeoutB7Z5go-ai-agent/app/rag-api/internal/conf;confb\x06proto3"
+	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\xd9\x03\n" +
+	"\x04Data\x12,\n" +
+	"\x05model\x18\x01 \x01(\v2\x16.kratos.api.Data.ModelR\x05model\x12/\n" +
+	"\x06milvus\x18\x02 \x01(\v2\x17.kratos.api.Data.MilvusR\x06milvus\x125\n" +
+	"\bembedder\x18\x03 \x01(\v2\x19.kratos.api.Data.EmbedderR\bembedder\x1av\n" +
+	"\x05Model\x12\x1a\n" +
+	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x17\n" +
+	"\aapi_key\x18\x02 \x01(\tR\x06apiKey\x12\x19\n" +
+	"\bbase_url\x18\x03 \x01(\tR\abaseUrl\x12\x1d\n" +
+	"\n" +
+	"model_name\x18\x04 \x01(\tR\tmodelName\x1at\n" +
+	"\x06Milvus\x12\x12\n" +
+	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x1e\n" +
+	"\n" +
+	"collection\x18\x02 \x01(\tR\n" +
+	"collection\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12\x1a\n" +
+	"\bpassword\x18\x04 \x01(\tR\bpassword\x1aM\n" +
+	"\bEmbedder\x12\x19\n" +
+	"\bbase_url\x18\x01 \x01(\tR\abaseUrl\x12\x14\n" +
+	"\x05model\x18\x02 \x01(\tR\x05model\x12\x10\n" +
+	"\x03dim\x18\x03 \x01(\x05R\x03dimB,Z*go-ai-agent/app/rag-api/internal/conf;confb\x06proto3"
 
 var (
 	file_conf_conf_proto_rawDescOnce sync.Once
@@ -485,33 +556,33 @@ func file_conf_conf_proto_rawDescGZIP() []byte {
 	return file_conf_conf_proto_rawDescData
 }
 
-var file_conf_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_conf_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_conf_conf_proto_goTypes = []any{
 	(*Bootstrap)(nil),           // 0: kratos.api.Bootstrap
 	(*Server)(nil),              // 1: kratos.api.Server
 	(*Data)(nil),                // 2: kratos.api.Data
 	(*Server_HTTP)(nil),         // 3: kratos.api.Server.HTTP
 	(*Server_GRPC)(nil),         // 4: kratos.api.Server.GRPC
-	(*Data_Database)(nil),       // 5: kratos.api.Data.Database
-	(*Data_Redis)(nil),          // 6: kratos.api.Data.Redis
-	(*durationpb.Duration)(nil), // 7: google.protobuf.Duration
+	(*Data_Model)(nil),          // 5: kratos.api.Data.Model
+	(*Data_Milvus)(nil),         // 6: kratos.api.Data.Milvus
+	(*Data_Embedder)(nil),       // 7: kratos.api.Data.Embedder
+	(*durationpb.Duration)(nil), // 8: google.protobuf.Duration
 }
 var file_conf_conf_proto_depIdxs = []int32{
-	1,  // 0: kratos.api.Bootstrap.server:type_name -> kratos.api.Server
-	2,  // 1: kratos.api.Bootstrap.data:type_name -> kratos.api.Data
-	3,  // 2: kratos.api.Server.http:type_name -> kratos.api.Server.HTTP
-	4,  // 3: kratos.api.Server.grpc:type_name -> kratos.api.Server.GRPC
-	5,  // 4: kratos.api.Data.database:type_name -> kratos.api.Data.Database
-	6,  // 5: kratos.api.Data.redis:type_name -> kratos.api.Data.Redis
-	7,  // 6: kratos.api.Server.HTTP.timeout:type_name -> google.protobuf.Duration
-	7,  // 7: kratos.api.Server.GRPC.timeout:type_name -> google.protobuf.Duration
-	7,  // 8: kratos.api.Data.Redis.read_timeout:type_name -> google.protobuf.Duration
-	7,  // 9: kratos.api.Data.Redis.write_timeout:type_name -> google.protobuf.Duration
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	1, // 0: kratos.api.Bootstrap.server:type_name -> kratos.api.Server
+	2, // 1: kratos.api.Bootstrap.data:type_name -> kratos.api.Data
+	3, // 2: kratos.api.Server.http:type_name -> kratos.api.Server.HTTP
+	4, // 3: kratos.api.Server.grpc:type_name -> kratos.api.Server.GRPC
+	5, // 4: kratos.api.Data.model:type_name -> kratos.api.Data.Model
+	6, // 5: kratos.api.Data.milvus:type_name -> kratos.api.Data.Milvus
+	7, // 6: kratos.api.Data.embedder:type_name -> kratos.api.Data.Embedder
+	8, // 7: kratos.api.Server.HTTP.timeout:type_name -> google.protobuf.Duration
+	8, // 8: kratos.api.Server.GRPC.timeout:type_name -> google.protobuf.Duration
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_conf_conf_proto_init() }
@@ -525,7 +596,7 @@ func file_conf_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_conf_conf_proto_rawDesc), len(file_conf_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
