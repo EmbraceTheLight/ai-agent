@@ -82,6 +82,24 @@ func (md *MilvusVS) Search(ctx context.Context, queryVector Vector, topK int) ([
 	return parseSearchResToRagChunk(&result[0])
 }
 
+// ResetCollection 删除并重新创建 Milvus collection。
+// 输入: `ctx` 用于控制删除、创建索引和加载 collection 的生命周期。
+// 输出: collection 不存在或成功重建时返回 nil; 任一步骤失败时返回错误。
+// 示例: `milvusVS.ResetCollection(ctx)` -> 使用相同名称创建一个空 collection。
+func (md *MilvusVS) ResetCollection(ctx context.Context) error {
+	exists, err := md.client.HasCollection(ctx, milvusclient.NewHasCollectionOption(config.MilvusCollection))
+	if err != nil {
+		return err
+	}
+	if exists {
+		err = md.client.DropCollection(ctx, milvusclient.NewDropCollectionOption(config.MilvusCollection))
+		if err != nil {
+			return err
+		}
+	}
+	return md.InitCollections(ctx)
+}
+
 func (md *MilvusVS) InitCollections(ctx context.Context) error {
 	exists, err := md.client.HasCollection(ctx, milvusclient.NewHasCollectionOption(config.MilvusCollection))
 	if err != nil {
