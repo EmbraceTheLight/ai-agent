@@ -37,6 +37,11 @@ generate:
 	go generate ./...
 	go mod tidy
 
+.PHONY: wire
+# wire
+wire:
+	cd ./cmd/rag_api && wire
+
 .PHONY: all
 # generate all
 all:
