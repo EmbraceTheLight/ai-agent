@@ -12,6 +12,11 @@ import (
 // 输出: 支持写入向量记录并按相似度检索 topK。
 // 示例: `store.Add(ctx, vec, chunk); store.Search(ctx, queryVec, 3)`。
 type VectorStore interface {
+	// Add 保存一个 chunk 及其 embedding 向量。
+	// 输入: `Vector` 是 chunk embedding, `chunk` 是包含来源信息的 chunk。
+	// 输出: 成功返回 nil; 向量非法或 chunk 为空时返回错误。
+	// 示例: `Add(ctx, Vector{1, 0}, chunk)`。
+	Add(ctx context.Context, vector Vector, chunk *Chunk) error
 
 	// Search 检索与 queryVector 最相似的 topK 个 chunk。
 	// 输入: `queryVector` 是问题 embedding, `topK` 是返回数量。
@@ -40,6 +45,14 @@ type ImportResult struct {
 	Embedded  int
 }
 
+// AskResult 描述一次 RAG 问答的结果。
+// 输入: 由 Ask 根据检索结果和模型回答生成。
+// 输出: 保存回答文本和原始检索结果。
+// 示例: `AskResult{Answer: "...", SearchResults: results}`。
+type AskResult struct {
+	Answer        string
+	SearchResults []*SearchResult
+}
 
 // RAGUsecase 编排文档导入和 RAG 问答流程。
 // 输入: 依赖文档加载、embedding、向量存储和 LLM 等领域端口。
@@ -150,6 +163,43 @@ func (usecase *RAGUsecase) ImportDocuments(ctx context.Context, path string) (*I
 // 输入: `ctx` 是请求上下文, `question` 是用户问题, `topK` 是检索数量。
 // 输出: 返回模型回答和原始检索结果; 任一步骤失败时返回错误。
 // 示例: `usecase.Ask(ctx, "什么是 RAG?", 3)`。
+func (usecase *RAGUsecase) Ask(ctx context.Context, question string, topK int) (*AskResult, error) {
+	question = strings.TrimSpace(question)
+	if question == "" {
+		return nil, fmt.Errorf("问题不能为空")
+	}
+	if topK <= 0 {
+		return nil, fmt.Errorf("topK 必须大于 0")
+	}
+	if usecase.embedder == nil {
+		return nil, fmt.Errorf("embedding provider 不能为空")
+	}
+	if usecase.vectorStore == nil {
+		return nil, fmt.Errorf("vector store 不能为空")
+	}
+	if usecase.llm == nil {
+		return nil, fmt.Errorf("LLM provider 不能为空")
+	}
+
+	queryEmbeddings, err := usecase.embedder.Embed(ctx, []string{question})
+	if err != nil {
+		return nil, fmt.Errorf("生成问题 embedding 失败: %w", err)
+	}
+	if len(queryEmbeddings) != 1 {
+		return nil, fmt.Errorf("问题 embedding 数量不匹配: 期望 1, 实际 %d", len(queryEmbeddings))
+	}
+
+	searchResults, err := usecase.vectorStore.Search(ctx, Vector(queryEmbeddings[0]), topK)
+	if err != nil {
+		return nil, fmt.Errorf("检索相关 chunk 失败: %w", err)
+	}
+
+	answer, err := usecase.llm.Generate(ctx, BuildPrompt(searchResults), question)
+	if err != nil {
+		return nil, fmt.Errorf("生成 RAG 回答失败: %w", err)
+	}
+	return &AskResult{Answer: answer, SearchResults: searchResults}, nil
+}
 
 // chunkTexts 从 chunk 列表中提取用于 embedding 的文本。
 // 输入: `chunks` 是文档 chunk 列表, `limit` 是最多提取的数量; `limit <= 0` 表示不限制。
