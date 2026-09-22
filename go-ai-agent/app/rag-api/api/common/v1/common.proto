@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "go-ai-agent/app/rag-api/api/common/v1;commonv1";
+
+message CommonResp {
+  int32 status_code = 1;
+  string msg = 2;
+  string err_msg = 3;
+}

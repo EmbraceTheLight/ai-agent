@@ -164,7 +164,7 @@ type EmbedResp struct {
 
 ### embedderClient
 
-`embedderClient` 保存模型名和 HTTP Client：
+`embedderData` 保存模型名和 HTTP Client：
 
 ```go
 type embedderClient struct {

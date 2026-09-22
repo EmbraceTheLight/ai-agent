@@ -99,6 +99,9 @@ temp/
 config.local.*
 application-local.*
 
+# kratos 实际配置
+app/rag-api/configs/config.yaml
+
 # 密钥和证书
 *.key
 *.pem
