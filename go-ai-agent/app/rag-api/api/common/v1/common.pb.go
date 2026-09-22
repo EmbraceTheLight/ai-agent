@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: common.proto
+// source: common/v1/common.proto
 
 package commonv1
 
@@ -32,7 +32,7 @@ type CommonResp struct {
 
 func (x *CommonResp) Reset() {
 	*x = CommonResp{}
-	mi := &file_common_proto_msgTypes[0]
+	mi := &file_common_v1_common_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +44,7 @@ func (x *CommonResp) String() string {
 func (*CommonResp) ProtoMessage() {}
 
 func (x *CommonResp) ProtoReflect() protoreflect.Message {
-	mi := &file_common_proto_msgTypes[0]
+	mi := &file_common_v1_common_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +57,7 @@ func (x *CommonResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommonResp.ProtoReflect.Descriptor instead.
 func (*CommonResp) Descriptor() ([]byte, []int) {
-	return file_common_proto_rawDescGZIP(), []int{0}
+	return file_common_v1_common_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *CommonResp) GetStatusCode() int32 {
@@ -81,35 +81,35 @@ func (x *CommonResp) GetErrMsg() string {
 	return ""
 }
 
-var File_common_proto protoreflect.FileDescriptor
+var File_common_v1_common_proto protoreflect.FileDescriptor
 
-const file_common_proto_rawDesc = "" +
+const file_common_v1_common_proto_rawDesc = "" +
 	"\n" +
-	"\fcommon.proto\x12\x06common\"X\n" +
+	"\x16common/v1/common.proto\x12\tcommon.v1\"X\n" +
 	"\n" +
 	"CommonResp\x12\x1f\n" +
 	"\vstatus_code\x18\x01 \x01(\x05R\n" +
 	"statusCode\x12\x10\n" +
 	"\x03msg\x18\x02 \x01(\tR\x03msg\x12\x17\n" +
-	"\aerr_msg\x18\x03 \x01(\tR\x06errMsgB%Z#app/rag-api/api/rag/common;commonv1b\x06proto3"
+	"\aerr_msg\x18\x03 \x01(\tR\x06errMsgB0Z.go-ai-agent/app/rag-api/api/common/v1;commonv1b\x06proto3"
 
 var (
-	file_common_proto_rawDescOnce sync.Once
-	file_common_proto_rawDescData []byte
+	file_common_v1_common_proto_rawDescOnce sync.Once
+	file_common_v1_common_proto_rawDescData []byte
 )
 
-func file_common_proto_rawDescGZIP() []byte {
-	file_common_proto_rawDescOnce.Do(func() {
-		file_common_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_common_proto_rawDesc), len(file_common_proto_rawDesc)))
+func file_common_v1_common_proto_rawDescGZIP() []byte {
+	file_common_v1_common_proto_rawDescOnce.Do(func() {
+		file_common_v1_common_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_common_v1_common_proto_rawDesc), len(file_common_v1_common_proto_rawDesc)))
 	})
-	return file_common_proto_rawDescData
+	return file_common_v1_common_proto_rawDescData
 }
 
-var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_common_proto_goTypes = []any{
-	(*CommonResp)(nil), // 0: common.CommonResp
+var file_common_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_common_v1_common_proto_goTypes = []any{
+	(*CommonResp)(nil), // 0: common.v1.CommonResp
 }
-var file_common_proto_depIdxs = []int32{
+var file_common_v1_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
 	0, // [0:0] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -117,26 +117,26 @@ var file_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_common_proto_init() }
-func file_common_proto_init() {
-	if File_common_proto != nil {
+func init() { file_common_v1_common_proto_init() }
+func file_common_v1_common_proto_init() {
+	if File_common_v1_common_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_proto_rawDesc), len(file_common_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_v1_common_proto_rawDesc), len(file_common_v1_common_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_common_proto_goTypes,
-		DependencyIndexes: file_common_proto_depIdxs,
-		MessageInfos:      file_common_proto_msgTypes,
+		GoTypes:           file_common_v1_common_proto_goTypes,
+		DependencyIndexes: file_common_v1_common_proto_depIdxs,
+		MessageInfos:      file_common_v1_common_proto_msgTypes,
 	}.Build()
-	File_common_proto = out.File
-	file_common_proto_goTypes = nil
-	file_common_proto_depIdxs = nil
+	File_common_v1_common_proto = out.File
+	file_common_v1_common_proto_goTypes = nil
+	file_common_v1_common_proto_depIdxs = nil
 }

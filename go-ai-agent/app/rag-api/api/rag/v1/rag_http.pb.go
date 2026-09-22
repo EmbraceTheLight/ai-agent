@@ -30,8 +30,8 @@ type RagServiceHTTPServer interface {
 func RegisterRagServiceHTTPServer(s *http.Server, srv RagServiceHTTPServer) {
 	r := s.Route("/")
 	r.Handle("GET", "/api/v1/health", _RagService_Health0_HTTP_Handler(srv))
-	r.Handle("GET", "/api/v1/documents/import", _RagService_ImportDocument0_HTTP_Handler(srv))
-	r.Handle("GET", "/api/v1/ask", _RagService_Ask0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/documents/import", _RagService_ImportDocument0_HTTP_Handler(srv))
+	r.Handle("POST", "/api/v1/ask", _RagService_Ask0_HTTP_Handler(srv))
 }
 
 func _RagService_Health0_HTTP_Handler(srv RagServiceHTTPServer) func(ctx http.Context) error {
@@ -56,7 +56,7 @@ func _RagService_Health0_HTTP_Handler(srv RagServiceHTTPServer) func(ctx http.Co
 func _RagService_ImportDocument0_HTTP_Handler(srv RagServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in ImportDocumentRequest
-		if err := ctx.BindQuery(&in); err != nil {
+		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationRagServiceImportDocument)
@@ -75,7 +75,7 @@ func _RagService_ImportDocument0_HTTP_Handler(srv RagServiceHTTPServer) func(ctx
 func _RagService_Ask0_HTTP_Handler(srv RagServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
 		var in AskRequest
-		if err := ctx.BindQuery(&in); err != nil {
+		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
 		http.SetOperation(ctx, OperationRagServiceAsk)
@@ -108,13 +108,14 @@ func NewRagServiceHTTPClient(client *http.Client) RagServiceHTTPClient {
 func (c *RagServiceHTTPClientImpl) Ask(ctx context.Context, in *AskRequest, opts ...http.CallOption) (*AskResponse, error) {
 	var out AskResponse
 	pattern := "/api/v1/ask"
-	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	path := http.BuildPath(pattern, in)
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
 		http.Operation(OperationRagServiceAsk),
 		http.PathTemplate(pattern),
 	}, opts...)
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -140,13 +141,14 @@ func (c *RagServiceHTTPClientImpl) Health(ctx context.Context, in *HealthRequest
 func (c *RagServiceHTTPClientImpl) ImportDocument(ctx context.Context, in *ImportDocumentRequest, opts ...http.CallOption) (*ImportDocumentResponse, error) {
 	var out ImportDocumentResponse
 	pattern := "/api/v1/documents/import"
-	path := http.BuildPath(pattern, in, http.WithQueryParams())
+	path := http.BuildPath(pattern, in)
 	opts = append([]http.CallOption{
 		http.Accept("application/protojson"),
+		http.ContentType("application/protojson"),
 		http.Operation(OperationRagServiceImportDocument),
 		http.PathTemplate(pattern),
 	}, opts...)
-	err := c.cc.Invoke(ctx, "GET", path, nil, &out, opts...)
+	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
 		return nil, err
 	}
