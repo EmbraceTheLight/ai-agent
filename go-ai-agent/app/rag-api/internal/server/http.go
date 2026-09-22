@@ -37,6 +37,6 @@ func NewHTTPServer(c *conf.Server, ragService *service.RAGService) *http.Server 
 		opts = append(opts, http.Timeout(c.Http.Timeout.AsDuration()))
 	}
 	srv := http.NewServer(opts...)
-	v1.RegisterRagHTTPServer(srv, ragService)
+	v1.RegisterRagServiceHTTPServer(srv, ragService)
 	return srv
 }

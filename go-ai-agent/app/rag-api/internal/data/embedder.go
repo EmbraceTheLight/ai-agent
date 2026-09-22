@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"fmt"
 	"go-ai-agent/app/rag-api/internal/biz"
 	"log/slog"
 )
@@ -12,6 +13,9 @@ type embedderRepo struct {
 }
 
 func NewEmbedderRepo(data *Data, log *slog.Logger) biz.Embedder {
+	if log == nil {
+		log = slog.Default()
+	}
 	return &embedderRepo{
 		data: data,
 		log:  log,
@@ -27,6 +31,9 @@ type embedResp struct {
 }
 
 func (repo *embedderRepo) Embed(ctx context.Context, chunks []string) ([][]float32, error) {
+	if repo == nil || repo.data == nil || repo.data.embedderData == nil {
+		return nil, fmt.Errorf("embedding client 未初始化")
+	}
 	requestBody := map[string]any{
 		"model": repo.data.embedderData.model,
 		"input": chunks,
