@@ -20,3 +20,11 @@ data:
     base_url: <base_embedding_model_ip:port>
     model: qwen3-embedding:0.6b
     dim: 1024
+  rag:
+    vector_store: milvus
+    chunk_size: 500
+    overlap: 100
+    limit_docs: 0
+    limit_chunks: 0
+    allow_extensions:
+      - .md

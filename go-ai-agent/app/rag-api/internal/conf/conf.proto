@@ -43,7 +43,16 @@ message Data {
     string model = 2;
     int32 dim = 3;
   }
+  message Rag {
+    string vector_store = 1;
+    int32 chunk_size = 2;
+    int32 overlap = 3;
+    int32 limit_docs = 4;
+    int32 limit_chunks = 5;
+    repeated string allow_extensions = 6;
+  }
   Model model = 1;
   Milvus milvus = 2;
   Embedder embedder = 3;
+  Rag rag = 4;
 }

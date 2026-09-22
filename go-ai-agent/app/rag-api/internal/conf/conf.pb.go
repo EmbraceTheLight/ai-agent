@@ -131,6 +131,7 @@ type Data struct {
 	Model         *Data_Model            `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
 	Milvus        *Data_Milvus           `protobuf:"bytes,2,opt,name=milvus,proto3" json:"milvus,omitempty"`
 	Embedder      *Data_Embedder         `protobuf:"bytes,3,opt,name=embedder,proto3" json:"embedder,omitempty"`
+	Rag           *Data_Rag              `protobuf:"bytes,4,opt,name=rag,proto3" json:"rag,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -182,6 +183,13 @@ func (x *Data) GetMilvus() *Data_Milvus {
 func (x *Data) GetEmbedder() *Data_Embedder {
 	if x != nil {
 		return x.Embedder
+	}
+	return nil
+}
+
+func (x *Data) GetRag() *Data_Rag {
+	if x != nil {
+		return x.Rag
 	}
 	return nil
 }
@@ -502,6 +510,90 @@ func (x *Data_Embedder) GetDim() int32 {
 	return 0
 }
 
+type Data_Rag struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	VectorStore     string                 `protobuf:"bytes,1,opt,name=vector_store,json=vectorStore,proto3" json:"vector_store,omitempty"`
+	ChunkSize       int32                  `protobuf:"varint,2,opt,name=chunk_size,json=chunkSize,proto3" json:"chunk_size,omitempty"`
+	Overlap         int32                  `protobuf:"varint,3,opt,name=overlap,proto3" json:"overlap,omitempty"`
+	LimitDocs       int32                  `protobuf:"varint,4,opt,name=limit_docs,json=limitDocs,proto3" json:"limit_docs,omitempty"`
+	LimitChunks     int32                  `protobuf:"varint,5,opt,name=limit_chunks,json=limitChunks,proto3" json:"limit_chunks,omitempty"`
+	AllowExtensions []string               `protobuf:"bytes,6,rep,name=allow_extensions,json=allowExtensions,proto3" json:"allow_extensions,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Data_Rag) Reset() {
+	*x = Data_Rag{}
+	mi := &file_conf_conf_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Data_Rag) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Data_Rag) ProtoMessage() {}
+
+func (x *Data_Rag) ProtoReflect() protoreflect.Message {
+	mi := &file_conf_conf_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Data_Rag.ProtoReflect.Descriptor instead.
+func (*Data_Rag) Descriptor() ([]byte, []int) {
+	return file_conf_conf_proto_rawDescGZIP(), []int{2, 3}
+}
+
+func (x *Data_Rag) GetVectorStore() string {
+	if x != nil {
+		return x.VectorStore
+	}
+	return ""
+}
+
+func (x *Data_Rag) GetChunkSize() int32 {
+	if x != nil {
+		return x.ChunkSize
+	}
+	return 0
+}
+
+func (x *Data_Rag) GetOverlap() int32 {
+	if x != nil {
+		return x.Overlap
+	}
+	return 0
+}
+
+func (x *Data_Rag) GetLimitDocs() int32 {
+	if x != nil {
+		return x.LimitDocs
+	}
+	return 0
+}
+
+func (x *Data_Rag) GetLimitChunks() int32 {
+	if x != nil {
+		return x.LimitChunks
+	}
+	return 0
+}
+
+func (x *Data_Rag) GetAllowExtensions() []string {
+	if x != nil {
+		return x.AllowExtensions
+	}
+	return nil
+}
+
 var File_conf_conf_proto protoreflect.FileDescriptor
 
 const file_conf_conf_proto_rawDesc = "" +
@@ -521,11 +613,12 @@ const file_conf_conf_proto_rawDesc = "" +
 	"\x04GRPC\x12\x18\n" +
 	"\anetwork\x18\x01 \x01(\tR\anetwork\x12\x12\n" +
 	"\x04addr\x18\x02 \x01(\tR\x04addr\x123\n" +
-	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\xd9\x03\n" +
+	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\xd2\x05\n" +
 	"\x04Data\x12,\n" +
 	"\x05model\x18\x01 \x01(\v2\x16.kratos.api.Data.ModelR\x05model\x12/\n" +
 	"\x06milvus\x18\x02 \x01(\v2\x17.kratos.api.Data.MilvusR\x06milvus\x125\n" +
-	"\bembedder\x18\x03 \x01(\v2\x19.kratos.api.Data.EmbedderR\bembedder\x1av\n" +
+	"\bembedder\x18\x03 \x01(\v2\x19.kratos.api.Data.EmbedderR\bembedder\x12&\n" +
+	"\x03rag\x18\x04 \x01(\v2\x14.kratos.api.Data.RagR\x03rag\x1av\n" +
 	"\x05Model\x12\x1a\n" +
 	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x17\n" +
 	"\aapi_key\x18\x02 \x01(\tR\x06apiKey\x12\x19\n" +
@@ -542,7 +635,16 @@ const file_conf_conf_proto_rawDesc = "" +
 	"\bEmbedder\x12\x19\n" +
 	"\bbase_url\x18\x01 \x01(\tR\abaseUrl\x12\x14\n" +
 	"\x05model\x18\x02 \x01(\tR\x05model\x12\x10\n" +
-	"\x03dim\x18\x03 \x01(\x05R\x03dimB,Z*go-ai-agent/app/rag-api/internal/conf;confb\x06proto3"
+	"\x03dim\x18\x03 \x01(\x05R\x03dim\x1a\xce\x01\n" +
+	"\x03Rag\x12!\n" +
+	"\fvector_store\x18\x01 \x01(\tR\vvectorStore\x12\x1d\n" +
+	"\n" +
+	"chunk_size\x18\x02 \x01(\x05R\tchunkSize\x12\x18\n" +
+	"\aoverlap\x18\x03 \x01(\x05R\aoverlap\x12\x1d\n" +
+	"\n" +
+	"limit_docs\x18\x04 \x01(\x05R\tlimitDocs\x12!\n" +
+	"\flimit_chunks\x18\x05 \x01(\x05R\vlimitChunks\x12)\n" +
+	"\x10allow_extensions\x18\x06 \x03(\tR\x0fallowExtensionsB,Z*go-ai-agent/app/rag-api/internal/conf;confb\x06proto3"
 
 var (
 	file_conf_conf_proto_rawDescOnce sync.Once
@@ -556,7 +658,7 @@ func file_conf_conf_proto_rawDescGZIP() []byte {
 	return file_conf_conf_proto_rawDescData
 }
 
-var file_conf_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_conf_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_conf_conf_proto_goTypes = []any{
 	(*Bootstrap)(nil),           // 0: kratos.api.Bootstrap
 	(*Server)(nil),              // 1: kratos.api.Server
@@ -566,23 +668,25 @@ var file_conf_conf_proto_goTypes = []any{
 	(*Data_Model)(nil),          // 5: kratos.api.Data.Model
 	(*Data_Milvus)(nil),         // 6: kratos.api.Data.Milvus
 	(*Data_Embedder)(nil),       // 7: kratos.api.Data.Embedder
-	(*durationpb.Duration)(nil), // 8: google.protobuf.Duration
+	(*Data_Rag)(nil),            // 8: kratos.api.Data.Rag
+	(*durationpb.Duration)(nil), // 9: google.protobuf.Duration
 }
 var file_conf_conf_proto_depIdxs = []int32{
-	1, // 0: kratos.api.Bootstrap.server:type_name -> kratos.api.Server
-	2, // 1: kratos.api.Bootstrap.data:type_name -> kratos.api.Data
-	3, // 2: kratos.api.Server.http:type_name -> kratos.api.Server.HTTP
-	4, // 3: kratos.api.Server.grpc:type_name -> kratos.api.Server.GRPC
-	5, // 4: kratos.api.Data.model:type_name -> kratos.api.Data.Model
-	6, // 5: kratos.api.Data.milvus:type_name -> kratos.api.Data.Milvus
-	7, // 6: kratos.api.Data.embedder:type_name -> kratos.api.Data.Embedder
-	8, // 7: kratos.api.Server.HTTP.timeout:type_name -> google.protobuf.Duration
-	8, // 8: kratos.api.Server.GRPC.timeout:type_name -> google.protobuf.Duration
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	1,  // 0: kratos.api.Bootstrap.server:type_name -> kratos.api.Server
+	2,  // 1: kratos.api.Bootstrap.data:type_name -> kratos.api.Data
+	3,  // 2: kratos.api.Server.http:type_name -> kratos.api.Server.HTTP
+	4,  // 3: kratos.api.Server.grpc:type_name -> kratos.api.Server.GRPC
+	5,  // 4: kratos.api.Data.model:type_name -> kratos.api.Data.Model
+	6,  // 5: kratos.api.Data.milvus:type_name -> kratos.api.Data.Milvus
+	7,  // 6: kratos.api.Data.embedder:type_name -> kratos.api.Data.Embedder
+	8,  // 7: kratos.api.Data.rag:type_name -> kratos.api.Data.Rag
+	9,  // 8: kratos.api.Server.HTTP.timeout:type_name -> google.protobuf.Duration
+	9,  // 9: kratos.api.Server.GRPC.timeout:type_name -> google.protobuf.Duration
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_conf_conf_proto_init() }
@@ -596,7 +700,7 @@ func file_conf_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_conf_conf_proto_rawDesc), len(file_conf_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
