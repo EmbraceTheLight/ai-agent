@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go-ai-agent/app/rag-api/internal/conf"
+	"go-ai-agent/app/rag-api/internal/data/dal/query"
 	"go-ai-agent/internal/config"
 	"go-ai-agent/internal/utils"
 	"gorm.io/driver/mysql"
@@ -113,7 +114,7 @@ func NewMySQL(c *conf.Data) *gorm.DB {
 	if err := sqlDB.Ping(); err != nil {
 		panic(err)
 	}
-	//query.SetDefault(db)
+	query.SetDefault(db)
 	return db
 }
 
