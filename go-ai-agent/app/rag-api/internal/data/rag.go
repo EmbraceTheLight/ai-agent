@@ -24,7 +24,7 @@ func NewRAGConfig(c *conf.Data) *biz.RAGConfig {
 	if c.Rag.ChunkSize > 0 {
 		result.ChunkSize = int(c.Rag.ChunkSize)
 	}
-	if c.Rag.Overlap >= 0 {
+	if c.Rag.Overlap > 0 {
 		result.Overlap = int(c.Rag.Overlap)
 	}
 	result.LimitChunks = int(c.Rag.LimitChunks)
