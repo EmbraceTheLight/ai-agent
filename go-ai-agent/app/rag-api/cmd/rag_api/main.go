@@ -2,10 +2,9 @@ package main
 
 import (
 	"flag"
+	"go-ai-agent/app/rag-api/internal/conf"
 	"log/slog"
 	"os"
-
-	"go-ai-agent/app/rag-api/internal/conf"
 
 	"github.com/go-kratos/kratos/v3"
 	"github.com/go-kratos/kratos/v3/config"
@@ -32,7 +31,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&flagconf, "conf", "../../configs", "config path, eg: -conf config.yaml")
+	flag.StringVar(&flagconf, "conf", "app/rag-api/configs/config.yaml", "config path, eg: -conf config.yaml")
 }
 
 func newApp(logger *slog.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
@@ -88,8 +87,8 @@ func main() {
 // newLogger 底层 log 替换为 zap
 func newLogger() (*slog.Logger, func(), error) {
 	zapConfig := zap.NewProductionConfig()
-	zapConfig.OutputPaths = []string{"stdout", "log/log.txt"}
-	zapConfig.ErrorOutputPaths = []string{"stderr", "log/error.txt"}
+	zapConfig.OutputPaths = []string{"stdout", "app/rag-api/log/log.txt"}
+	zapConfig.ErrorOutputPaths = []string{"stderr", "app/rag-api/log/error.txt"}
 
 	zapLogger, err := zapConfig.Build()
 	if err != nil {
