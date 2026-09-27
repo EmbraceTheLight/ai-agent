@@ -25,7 +25,13 @@ import (
 // wireApp init kratos application.
 func wireApp(confServer *conf.Server, confData *conf.Data, logger *slog.Logger) (*kratos.App, func(), error) {
 	documentLoader := data.NewDocumentLoader(confData)
-	dataData, cleanup, err := data.NewData(confData)
+	db := data.NewMySQL(confData)
+	client, err := data.NewMilvusClient(confData)
+	if err != nil {
+		return nil, nil, err
+	}
+	embedderClient := data.NewEmbeddingClient(confData)
+	dataData, cleanup, err := data.NewData(db, client, embedderClient)
 	if err != nil {
 		return nil, nil, err
 	}

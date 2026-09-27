@@ -43,19 +43,19 @@ func NewVectorStore(data *Data, c *conf.Data) (biz.VectorStore, error) {
 	case config.LocalVDB:
 		return &memoryVectorStore{}, nil
 	case config.Milvus:
-		if data.milvus == nil {
-			return nil, fmt.Errorf("milvus client 未初始化")
+		if data.milvusClient == nil {
+			return nil, fmt.Errorf("milvusClient client 未初始化")
 		}
 		milvusConf := c.GetMilvus()
 		embedderConf := c.GetEmbedder()
 		if milvusConf == nil || milvusConf.Collection == "" {
-			return nil, fmt.Errorf("milvus collection 不能为空")
+			return nil, fmt.Errorf("milvusClient collection 不能为空")
 		}
 		if embedderConf == nil || embedderConf.Dim <= 0 {
 			return nil, fmt.Errorf("embedding dim 必须大于 0")
 		}
 		store := &MilvusVS{
-			client:     data.milvus,
+			client:     data.milvusClient,
 			collection: milvusConf.Collection,
 			dim:        int(embedderConf.Dim),
 		}

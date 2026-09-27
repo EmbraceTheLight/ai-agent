@@ -14,7 +14,7 @@ import (
 
 /* Milvus type */
 
-// MilvusCollectionField milvus collection 字段信息, 用于构建 schema 时使用。
+// MilvusCollectionField milvusClient collection 字段信息, 用于构建 schema 时使用。
 type MilvusCollectionField struct {
 	Id        int64 `json:"id"`
 	Name      string
@@ -25,7 +25,7 @@ type MilvusCollectionField struct {
 	MaxLength int
 }
 
-// MilvusVS milvus vector store。
+// MilvusVS milvusClient vector store。
 type MilvusVS struct {
 	client     *milvusclient.Client
 	collection string
@@ -38,7 +38,7 @@ type MilvusVS struct {
 // 示例: `store.Add(ctx, biz.Vector{1, 0}, chunk)`。
 func (md *MilvusVS) Add(ctx context.Context, vector biz.Vector, chunk *biz.Chunk) error {
 	if md == nil || md.client == nil {
-		return fmt.Errorf("milvus client 未初始化")
+		return fmt.Errorf("milvusClient client 未初始化")
 	}
 	if len(vector) != md.dim {
 		return fmt.Errorf("插入的向量维度为 %d, 期望为: %d", len(vector), md.dim)
@@ -72,7 +72,7 @@ func (md *MilvusVS) Add(ctx context.Context, vector biz.Vector, chunk *biz.Chunk
 // 示例: `store.Search(ctx, biz.Vector{1, 0}, 3)`。
 func (md *MilvusVS) Search(ctx context.Context, queryVector biz.Vector, topK int) ([]*biz.SearchResult, error) {
 	if md == nil || md.client == nil {
-		return nil, fmt.Errorf("milvus client 未初始化")
+		return nil, fmt.Errorf("milvusClient client 未初始化")
 	}
 	if topK <= 0 {
 		return nil, fmt.Errorf("topK 必须大于 0")
@@ -98,7 +98,7 @@ func (md *MilvusVS) Search(ctx context.Context, queryVector biz.Vector, topK int
 // 示例: `milvusVS.ResetCollection(ctx)` -> 使用相同名称创建一个空 collection。
 func (md *MilvusVS) ResetCollection(ctx context.Context) error {
 	if md == nil || md.client == nil {
-		return fmt.Errorf("milvus client 未初始化")
+		return fmt.Errorf("milvusClient client 未初始化")
 	}
 	exists, err := md.client.HasCollection(ctx, milvusclient.NewHasCollectionOption(md.collection))
 	if err != nil {
@@ -119,10 +119,10 @@ func (md *MilvusVS) ResetCollection(ctx context.Context) error {
 // 示例: `milvusVS.InitCollections(ctx)`。
 func (md *MilvusVS) InitCollections(ctx context.Context) error {
 	if md == nil || md.client == nil {
-		return fmt.Errorf("milvus client 未初始化")
+		return fmt.Errorf("milvusClient client 未初始化")
 	}
 	if md.collection == "" {
-		return fmt.Errorf("milvus collection 不能为空")
+		return fmt.Errorf("milvusClient collection 不能为空")
 	}
 	if md.dim <= 0 {
 		return fmt.Errorf("embedding dim 必须大于 0")

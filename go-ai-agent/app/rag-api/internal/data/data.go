@@ -18,6 +18,10 @@ import (
 // ProviderSet is data providers.
 var ProviderSet = wire.NewSet(
 	NewData,
+	NewEmbeddingClient,
+	NewMilvusClient,
+	NewMySQL,
+
 	NewEmbedderRepo,
 	NewVectorStore,
 	NewRAGConfig,
@@ -27,36 +31,32 @@ var ProviderSet = wire.NewSet(
 
 // Data holds the long-lived storage clients shared by repos.
 type Data struct {
-	milvus       *milvusclient.Client
-	embedderData *EmbedderData
+	mysqlClient    *gorm.DB
+	milvusClient   *milvusclient.Client
+	embedderClient *EmbedderClient
 }
 
-// EmbedderData 是基于 HTTP 的 embedding 客户端实现。
+// EmbedderClient 是基于 HTTP 的 embedding 客户端实现。
 // 输入: 保存 embedding 模型名称和通用 HTTP Client。
 // 输出: 通过 `Embed` 方法调用外部 embedding 服务。
 // 示例: `NewEmbeddingClient("http://localhost:11434", "qwen3-embedding:0.6b")`。
-type EmbedderData struct {
+type EmbedderClient struct {
 	model      string
 	httpClient *utils.HttpClient
 	dim        int
 }
 
 // NewData opens the database client and returns it with a cleanup function.
-func NewData(c *conf.Data) (*Data, func(), error) {
-	if c == nil {
-		return nil, func() {}, fmt.Errorf("data config 不能为空")
-	}
+func NewData(
+	mysqlClient *gorm.DB,
+	milvusClient *milvusclient.Client,
+	embeddingClient *EmbedderClient) (*Data, func(), error) {
 
-	data := &Data{embedderData: NewEmbeddingClient(c.Embedder)}
-	if vectorStoreType(c) != config.Milvus {
-		return data, func() {}, nil
+	data := &Data{
+		mysqlClient:    mysqlClient,
+		embedderClient: embeddingClient,
+		milvusClient:   milvusClient,
 	}
-
-	milvusClient, err := NewMilvusClient(c.Milvus)
-	if err != nil {
-		return nil, func() {}, err
-	}
-	data.milvus = milvusClient
 	return data, func() {
 		ctx, cancel := utils.GetContextWithTimeout(context.Background())
 		defer cancelIfNotNil(cancel)
@@ -67,14 +67,11 @@ func NewData(c *conf.Data) (*Data, func(), error) {
 // NewEmbeddingClient 创建 embedding 客户端。
 // 输入: `embedderConf` 是 embedding 服务配置。
 // 输出: 返回 `EmbedderClient` 的客户端。
-func NewEmbeddingClient(embedderConf *conf.Data_Embedder) *EmbedderData {
-	if embedderConf == nil {
-		embedderConf = &conf.Data_Embedder{}
-	}
-	return &EmbedderData{
-		model:      embedderConf.Model,
-		dim:        int(embedderConf.Dim),
-		httpClient: utils.NewHttpClient(embedderConf.BaseUrl),
+func NewEmbeddingClient(embedderConf *conf.Data) *EmbedderClient {
+	return &EmbedderClient{
+		model:      embedderConf.Embedder.Model,
+		dim:        int(embedderConf.Embedder.Dim),
+		httpClient: utils.NewHttpClient(embedderConf.Embedder.BaseUrl),
 	}
 }
 
@@ -82,16 +79,16 @@ func NewEmbeddingClient(embedderConf *conf.Data_Embedder) *EmbedderData {
 // 输入: `conf` 是 Milvus 地址和认证配置。
 // 输出: 返回已连接的 Milvus client; 配置或连接失败时返回错误。
 // 示例: `client, err := NewMilvusClient(confData.GetMilvus())`。
-func NewMilvusClient(conf *conf.Data_Milvus) (*milvusclient.Client, error) {
+func NewMilvusClient(conf *conf.Data) (*milvusclient.Client, error) {
 	if conf == nil {
-		return nil, fmt.Errorf("milvus config 不能为空")
+		return nil, fmt.Errorf("milvusClient config 不能为空")
 	}
 	ctx, cancel := utils.GetContextWithTimeout(context.Background())
 	defer cancelIfNotNil(cancel)
 	milvusClient, err := milvusclient.New(ctx, &milvusclient.ClientConfig{
-		Address:  conf.Addr,
-		Username: conf.Username,
-		Password: conf.Password,
+		Address:  conf.Milvus.Addr,
+		Username: conf.Milvus.Username,
+		Password: conf.Milvus.Password,
 	})
 	if err != nil {
 		return nil, err
@@ -121,7 +118,7 @@ func NewMySQL(c *conf.Data) *gorm.DB {
 // vectorStoreType 获取向量存储类型; 未配置时默认使用 Milvus。
 // 输入: `c` 是应用数据配置。
 // 输出: 返回规范化后的向量存储类型。
-// 示例: `vectorStoreType(conf)` -> `"milvus"`。
+// 示例: `vectorStoreType(conf)` -> `"milvusClient"`。
 func vectorStoreType(c *conf.Data) string {
 	if c == nil || c.Rag == nil || c.Rag.VectorStore == "" {
 		return config.Milvus

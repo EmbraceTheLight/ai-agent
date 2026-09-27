@@ -31,15 +31,15 @@ type embedResp struct {
 }
 
 func (repo *embedderRepo) Embed(ctx context.Context, chunks []string) ([][]float32, error) {
-	if repo == nil || repo.data == nil || repo.data.embedderData == nil {
+	if repo == nil || repo.data == nil || repo.data.embedderClient == nil {
 		return nil, fmt.Errorf("embedding client 未初始化")
 	}
 	requestBody := map[string]any{
-		"model": repo.data.embedderData.model,
+		"model": repo.data.embedderClient.model,
 		"input": chunks,
 	}
 	resp := &embedResp{}
-	err := repo.data.embedderData.httpClient.HttpPostJSON(ctx, "/api/embed", nil, requestBody, resp)
+	err := repo.data.embedderClient.httpClient.HttpPostJSON(ctx, "/api/embed", nil, requestBody, resp)
 	if err != nil {
 		return nil, err
 	}
