@@ -1,0 +1,136 @@
+# Generated with protoc-gen-openapi
+# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: RagService API
+    version: 0.0.1
+paths:
+    /api/v1/ask:
+        post:
+            tags:
+                - RagService
+            operationId: RagService_Ask
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/rag.v1.AskRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/rag.v1.AskResponse'
+    /api/v1/documents/import:
+        post:
+            tags:
+                - RagService
+            operationId: RagService_ImportDocument
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/rag.v1.ImportDocumentRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/rag.v1.ImportDocumentResponse'
+    /api/v1/health:
+        get:
+            tags:
+                - RagService
+            operationId: RagService_Health
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/rag.v1.HealthResponse'
+components:
+    schemas:
+        common.v1.CommonResp:
+            type: object
+            properties:
+                statusCode:
+                    type: integer
+                    format: int32
+                msg:
+                    type: string
+                errMsg:
+                    type: string
+        rag.v1.AskRequest:
+            required:
+                - question
+                - topK
+            type: object
+            properties:
+                question:
+                    type: string
+                topK:
+                    type: integer
+                    format: int32
+        rag.v1.AskResponse:
+            type: object
+            properties:
+                commonResp:
+                    $ref: '#/components/schemas/common.v1.CommonResp'
+                answer:
+                    type: string
+                citations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/rag.v1.Citation'
+                searchResults:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/rag.v1.SearchResult'
+        rag.v1.Citation:
+            type: object
+            properties:
+                sourceFile:
+                    type: string
+                title:
+                    type: string
+                chunkIndex:
+                    type: string
+        rag.v1.HealthResponse:
+            type: object
+            properties:
+                commonResp:
+                    $ref: '#/components/schemas/common.v1.CommonResp'
+        rag.v1.ImportDocumentRequest:
+            required:
+                - path
+            type: object
+            properties:
+                path:
+                    type: string
+        rag.v1.ImportDocumentResponse:
+            type: object
+            properties:
+                commonResp:
+                    $ref: '#/components/schemas/common.v1.CommonResp'
+        rag.v1.SearchResult:
+            type: object
+            properties:
+                sourceFile:
+                    type: string
+                title:
+                    type: string
+                chunkIndex:
+                    type: string
+                score:
+                    type: number
+                    format: double
+                content:
+                    type: string
+tags:
+    - name: RagService
