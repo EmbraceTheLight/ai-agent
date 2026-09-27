@@ -11,6 +11,14 @@ data:
     api_key: <api_key>
     base_url: <ip:port>
     model_name: gpt-5.6-sol
+  mysql:
+    host: <mysql host>
+    port: <mysql port>
+    user: <mysql user>
+    password: <mysql_password>
+    database: milvus
+    max_idle: 10
+    max_open: 100
   milvus:
     addr: <ip:port>
     collection: rag_chunks

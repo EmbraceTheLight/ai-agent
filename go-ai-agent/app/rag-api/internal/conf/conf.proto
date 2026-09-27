@@ -32,6 +32,16 @@ message Data {
     string base_url = 3;
     string model_name = 4;
   }
+  message Mysql {
+    string host     = 1;
+    string port     = 2;
+    string user     = 3;
+    string password = 4;
+    string database = 5;
+    int32 max_idle  = 6;
+    int32 max_open  = 7;
+    int32 log_level = 8;
+  }
   message Milvus {
     string addr = 1;
     string collection = 2;
@@ -52,7 +62,8 @@ message Data {
     repeated string allow_extensions = 6;
   }
   Model model = 1;
-  Milvus milvus = 2;
-  Embedder embedder = 3;
-  Rag rag = 4;
+  Mysql mysql = 2;
+  Milvus milvus = 3;
+  Embedder embedder = 4;
+  Rag rag = 5;
 }

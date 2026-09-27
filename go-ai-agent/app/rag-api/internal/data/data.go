@@ -6,6 +6,8 @@ import (
 	"go-ai-agent/app/rag-api/internal/conf"
 	"go-ai-agent/internal/config"
 	"go-ai-agent/internal/utils"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 	"strings"
 
 	"github.com/google/wire"
@@ -38,20 +40,6 @@ type EmbedderData struct {
 	dim        int
 }
 
-// NewEmbeddingClient 创建 embedding 客户端。
-// 输入: `embedderConf` 是 embedding 服务配置。
-// 输出: 返回 `EmbedderClient` 的客户端。
-func NewEmbeddingClient(embedderConf *conf.Data_Embedder) *EmbedderData {
-	if embedderConf == nil {
-		embedderConf = &conf.Data_Embedder{}
-	}
-	return &EmbedderData{
-		model:      embedderConf.Model,
-		dim:        int(embedderConf.Dim),
-		httpClient: utils.NewHttpClient(embedderConf.BaseUrl),
-	}
-}
-
 // NewData opens the database client and returns it with a cleanup function.
 func NewData(c *conf.Data) (*Data, func(), error) {
 	if c == nil {
@@ -75,6 +63,20 @@ func NewData(c *conf.Data) (*Data, func(), error) {
 	}, nil
 }
 
+// NewEmbeddingClient 创建 embedding 客户端。
+// 输入: `embedderConf` 是 embedding 服务配置。
+// 输出: 返回 `EmbedderClient` 的客户端。
+func NewEmbeddingClient(embedderConf *conf.Data_Embedder) *EmbedderData {
+	if embedderConf == nil {
+		embedderConf = &conf.Data_Embedder{}
+	}
+	return &EmbedderData{
+		model:      embedderConf.Model,
+		dim:        int(embedderConf.Dim),
+		httpClient: utils.NewHttpClient(embedderConf.BaseUrl),
+	}
+}
+
 // NewMilvusClient 创建长生命周期的 Milvus 客户端。
 // 输入: `conf` 是 Milvus 地址和认证配置。
 // 输出: 返回已连接的 Milvus client; 配置或连接失败时返回错误。
@@ -94,6 +96,25 @@ func NewMilvusClient(conf *conf.Data_Milvus) (*milvusclient.Client, error) {
 		return nil, err
 	}
 	return milvusClient, nil
+}
+
+func NewMySQL(c *conf.Data) *gorm.DB {
+	host, port, username, password, dbname := c.Mysql.Host, c.Mysql.Port, c.Mysql.User, c.Mysql.Password, c.Mysql.Database
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", username, password, host, port, dbname)
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+	})
+	if err != nil {
+		panic(err)
+	}
+	sqlDB, _ := db.DB()
+	sqlDB.SetMaxIdleConns(int(c.Mysql.MaxIdle))
+	sqlDB.SetMaxOpenConns(int(c.Mysql.MaxOpen))
+	if err := sqlDB.Ping(); err != nil {
+		panic(err)
+	}
+	//query.SetDefault(db)
+	return db
 }
 
 // vectorStoreType 获取向量存储类型; 未配置时默认使用 Milvus。

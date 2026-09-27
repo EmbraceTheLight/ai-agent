@@ -129,9 +129,10 @@ func (x *Server) GetGrpc() *Server_GRPC {
 type Data struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Model         *Data_Model            `protobuf:"bytes,1,opt,name=model,proto3" json:"model,omitempty"`
-	Milvus        *Data_Milvus           `protobuf:"bytes,2,opt,name=milvus,proto3" json:"milvus,omitempty"`
-	Embedder      *Data_Embedder         `protobuf:"bytes,3,opt,name=embedder,proto3" json:"embedder,omitempty"`
-	Rag           *Data_Rag              `protobuf:"bytes,4,opt,name=rag,proto3" json:"rag,omitempty"`
+	Mysql         *Data_Mysql            `protobuf:"bytes,2,opt,name=mysql,proto3" json:"mysql,omitempty"`
+	Milvus        *Data_Milvus           `protobuf:"bytes,3,opt,name=milvus,proto3" json:"milvus,omitempty"`
+	Embedder      *Data_Embedder         `protobuf:"bytes,4,opt,name=embedder,proto3" json:"embedder,omitempty"`
+	Rag           *Data_Rag              `protobuf:"bytes,5,opt,name=rag,proto3" json:"rag,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -169,6 +170,13 @@ func (*Data) Descriptor() ([]byte, []int) {
 func (x *Data) GetModel() *Data_Model {
 	if x != nil {
 		return x.Model
+	}
+	return nil
+}
+
+func (x *Data) GetMysql() *Data_Mysql {
+	if x != nil {
+		return x.Mysql
 	}
 	return nil
 }
@@ -382,6 +390,106 @@ func (x *Data_Model) GetModelName() string {
 	return ""
 }
 
+type Data_Mysql struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Port          string                 `protobuf:"bytes,2,opt,name=port,proto3" json:"port,omitempty"`
+	User          string                 `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
+	Password      string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
+	Database      string                 `protobuf:"bytes,5,opt,name=database,proto3" json:"database,omitempty"`
+	MaxIdle       int32                  `protobuf:"varint,6,opt,name=max_idle,json=maxIdle,proto3" json:"max_idle,omitempty"`
+	MaxOpen       int32                  `protobuf:"varint,7,opt,name=max_open,json=maxOpen,proto3" json:"max_open,omitempty"`
+	LogLevel      int32                  `protobuf:"varint,8,opt,name=log_level,json=logLevel,proto3" json:"log_level,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Data_Mysql) Reset() {
+	*x = Data_Mysql{}
+	mi := &file_conf_conf_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Data_Mysql) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Data_Mysql) ProtoMessage() {}
+
+func (x *Data_Mysql) ProtoReflect() protoreflect.Message {
+	mi := &file_conf_conf_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Data_Mysql.ProtoReflect.Descriptor instead.
+func (*Data_Mysql) Descriptor() ([]byte, []int) {
+	return file_conf_conf_proto_rawDescGZIP(), []int{2, 1}
+}
+
+func (x *Data_Mysql) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *Data_Mysql) GetPort() string {
+	if x != nil {
+		return x.Port
+	}
+	return ""
+}
+
+func (x *Data_Mysql) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
+}
+
+func (x *Data_Mysql) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *Data_Mysql) GetDatabase() string {
+	if x != nil {
+		return x.Database
+	}
+	return ""
+}
+
+func (x *Data_Mysql) GetMaxIdle() int32 {
+	if x != nil {
+		return x.MaxIdle
+	}
+	return 0
+}
+
+func (x *Data_Mysql) GetMaxOpen() int32 {
+	if x != nil {
+		return x.MaxOpen
+	}
+	return 0
+}
+
+func (x *Data_Mysql) GetLogLevel() int32 {
+	if x != nil {
+		return x.LogLevel
+	}
+	return 0
+}
+
 type Data_Milvus struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Addr          string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
@@ -394,7 +502,7 @@ type Data_Milvus struct {
 
 func (x *Data_Milvus) Reset() {
 	*x = Data_Milvus{}
-	mi := &file_conf_conf_proto_msgTypes[6]
+	mi := &file_conf_conf_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -406,7 +514,7 @@ func (x *Data_Milvus) String() string {
 func (*Data_Milvus) ProtoMessage() {}
 
 func (x *Data_Milvus) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[6]
+	mi := &file_conf_conf_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -419,7 +527,7 @@ func (x *Data_Milvus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Milvus.ProtoReflect.Descriptor instead.
 func (*Data_Milvus) Descriptor() ([]byte, []int) {
-	return file_conf_conf_proto_rawDescGZIP(), []int{2, 1}
+	return file_conf_conf_proto_rawDescGZIP(), []int{2, 2}
 }
 
 func (x *Data_Milvus) GetAddr() string {
@@ -461,7 +569,7 @@ type Data_Embedder struct {
 
 func (x *Data_Embedder) Reset() {
 	*x = Data_Embedder{}
-	mi := &file_conf_conf_proto_msgTypes[7]
+	mi := &file_conf_conf_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -473,7 +581,7 @@ func (x *Data_Embedder) String() string {
 func (*Data_Embedder) ProtoMessage() {}
 
 func (x *Data_Embedder) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[7]
+	mi := &file_conf_conf_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -486,7 +594,7 @@ func (x *Data_Embedder) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Embedder.ProtoReflect.Descriptor instead.
 func (*Data_Embedder) Descriptor() ([]byte, []int) {
-	return file_conf_conf_proto_rawDescGZIP(), []int{2, 2}
+	return file_conf_conf_proto_rawDescGZIP(), []int{2, 3}
 }
 
 func (x *Data_Embedder) GetBaseUrl() string {
@@ -524,7 +632,7 @@ type Data_Rag struct {
 
 func (x *Data_Rag) Reset() {
 	*x = Data_Rag{}
-	mi := &file_conf_conf_proto_msgTypes[8]
+	mi := &file_conf_conf_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -536,7 +644,7 @@ func (x *Data_Rag) String() string {
 func (*Data_Rag) ProtoMessage() {}
 
 func (x *Data_Rag) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[8]
+	mi := &file_conf_conf_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -549,7 +657,7 @@ func (x *Data_Rag) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Data_Rag.ProtoReflect.Descriptor instead.
 func (*Data_Rag) Descriptor() ([]byte, []int) {
-	return file_conf_conf_proto_rawDescGZIP(), []int{2, 3}
+	return file_conf_conf_proto_rawDescGZIP(), []int{2, 4}
 }
 
 func (x *Data_Rag) GetVectorStore() string {
@@ -613,18 +721,28 @@ const file_conf_conf_proto_rawDesc = "" +
 	"\x04GRPC\x12\x18\n" +
 	"\anetwork\x18\x01 \x01(\tR\anetwork\x12\x12\n" +
 	"\x04addr\x18\x02 \x01(\tR\x04addr\x123\n" +
-	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\xd2\x05\n" +
+	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\xd1\a\n" +
 	"\x04Data\x12,\n" +
-	"\x05model\x18\x01 \x01(\v2\x16.kratos.api.Data.ModelR\x05model\x12/\n" +
-	"\x06milvus\x18\x02 \x01(\v2\x17.kratos.api.Data.MilvusR\x06milvus\x125\n" +
-	"\bembedder\x18\x03 \x01(\v2\x19.kratos.api.Data.EmbedderR\bembedder\x12&\n" +
-	"\x03rag\x18\x04 \x01(\v2\x14.kratos.api.Data.RagR\x03rag\x1av\n" +
+	"\x05model\x18\x01 \x01(\v2\x16.kratos.api.Data.ModelR\x05model\x12,\n" +
+	"\x05mysql\x18\x02 \x01(\v2\x16.kratos.api.Data.MysqlR\x05mysql\x12/\n" +
+	"\x06milvus\x18\x03 \x01(\v2\x17.kratos.api.Data.MilvusR\x06milvus\x125\n" +
+	"\bembedder\x18\x04 \x01(\v2\x19.kratos.api.Data.EmbedderR\bembedder\x12&\n" +
+	"\x03rag\x18\x05 \x01(\v2\x14.kratos.api.Data.RagR\x03rag\x1av\n" +
 	"\x05Model\x12\x1a\n" +
 	"\bprovider\x18\x01 \x01(\tR\bprovider\x12\x17\n" +
 	"\aapi_key\x18\x02 \x01(\tR\x06apiKey\x12\x19\n" +
 	"\bbase_url\x18\x03 \x01(\tR\abaseUrl\x12\x1d\n" +
 	"\n" +
-	"model_name\x18\x04 \x01(\tR\tmodelName\x1at\n" +
+	"model_name\x18\x04 \x01(\tR\tmodelName\x1a\xce\x01\n" +
+	"\x05Mysql\x12\x12\n" +
+	"\x04host\x18\x01 \x01(\tR\x04host\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\tR\x04port\x12\x12\n" +
+	"\x04user\x18\x03 \x01(\tR\x04user\x12\x1a\n" +
+	"\bpassword\x18\x04 \x01(\tR\bpassword\x12\x1a\n" +
+	"\bdatabase\x18\x05 \x01(\tR\bdatabase\x12\x19\n" +
+	"\bmax_idle\x18\x06 \x01(\x05R\amaxIdle\x12\x19\n" +
+	"\bmax_open\x18\a \x01(\x05R\amaxOpen\x12\x1b\n" +
+	"\tlog_level\x18\b \x01(\x05R\blogLevel\x1at\n" +
 	"\x06Milvus\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x1e\n" +
 	"\n" +
@@ -658,7 +776,7 @@ func file_conf_conf_proto_rawDescGZIP() []byte {
 	return file_conf_conf_proto_rawDescData
 }
 
-var file_conf_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_conf_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_conf_conf_proto_goTypes = []any{
 	(*Bootstrap)(nil),           // 0: kratos.api.Bootstrap
 	(*Server)(nil),              // 1: kratos.api.Server
@@ -666,10 +784,11 @@ var file_conf_conf_proto_goTypes = []any{
 	(*Server_HTTP)(nil),         // 3: kratos.api.Server.HTTP
 	(*Server_GRPC)(nil),         // 4: kratos.api.Server.GRPC
 	(*Data_Model)(nil),          // 5: kratos.api.Data.Model
-	(*Data_Milvus)(nil),         // 6: kratos.api.Data.Milvus
-	(*Data_Embedder)(nil),       // 7: kratos.api.Data.Embedder
-	(*Data_Rag)(nil),            // 8: kratos.api.Data.Rag
-	(*durationpb.Duration)(nil), // 9: google.protobuf.Duration
+	(*Data_Mysql)(nil),          // 6: kratos.api.Data.Mysql
+	(*Data_Milvus)(nil),         // 7: kratos.api.Data.Milvus
+	(*Data_Embedder)(nil),       // 8: kratos.api.Data.Embedder
+	(*Data_Rag)(nil),            // 9: kratos.api.Data.Rag
+	(*durationpb.Duration)(nil), // 10: google.protobuf.Duration
 }
 var file_conf_conf_proto_depIdxs = []int32{
 	1,  // 0: kratos.api.Bootstrap.server:type_name -> kratos.api.Server
@@ -677,16 +796,17 @@ var file_conf_conf_proto_depIdxs = []int32{
 	3,  // 2: kratos.api.Server.http:type_name -> kratos.api.Server.HTTP
 	4,  // 3: kratos.api.Server.grpc:type_name -> kratos.api.Server.GRPC
 	5,  // 4: kratos.api.Data.model:type_name -> kratos.api.Data.Model
-	6,  // 5: kratos.api.Data.milvus:type_name -> kratos.api.Data.Milvus
-	7,  // 6: kratos.api.Data.embedder:type_name -> kratos.api.Data.Embedder
-	8,  // 7: kratos.api.Data.rag:type_name -> kratos.api.Data.Rag
-	9,  // 8: kratos.api.Server.HTTP.timeout:type_name -> google.protobuf.Duration
-	9,  // 9: kratos.api.Server.GRPC.timeout:type_name -> google.protobuf.Duration
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	6,  // 5: kratos.api.Data.mysql:type_name -> kratos.api.Data.Mysql
+	7,  // 6: kratos.api.Data.milvus:type_name -> kratos.api.Data.Milvus
+	8,  // 7: kratos.api.Data.embedder:type_name -> kratos.api.Data.Embedder
+	9,  // 8: kratos.api.Data.rag:type_name -> kratos.api.Data.Rag
+	10, // 9: kratos.api.Server.HTTP.timeout:type_name -> google.protobuf.Duration
+	10, // 10: kratos.api.Server.GRPC.timeout:type_name -> google.protobuf.Duration
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_conf_conf_proto_init() }
@@ -700,7 +820,7 @@ func file_conf_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_conf_conf_proto_rawDesc), len(file_conf_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
