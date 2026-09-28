@@ -29,7 +29,26 @@ type MilvusCollectionField struct {
 type MilvusVS struct {
 	client     *milvusclient.Client
 	collection string
+	batchSize  int
 	dim        int
+}
+
+func (md *MilvusVS) GetAllChunkByDocumentIdList(ctx context.Context, documentId []string) ([]*biz.Chunk, error) {
+	queryRes, err := md.client.Query(ctx, milvusclient.NewQueryOption(md.collection).
+		WithFilter(fmt.Sprintf("document_id = %s", documentId)).
+		WithOutputFields(getOutputFields()...))
+	if err != nil {
+		return nil, fmt.Errorf("milvus 查询 documentId %s 失败: %w", documentId, err)
+	}
+	res, err := parseSearchResToRagChunk(&queryRes)
+	if err != nil {
+		return nil, fmt.Errorf("解析 milvus 查询结果失败: %w, document_id: %s", err, documentId)
+	}
+	chunks := make([]*biz.Chunk, len(res))
+	for i := range res {
+		chunks[i] = res[i].Chunk
+	}
+	return chunks, nil
 }
 
 // Add 向 Milvus 向量库添加一条 chunk 向量记录。
@@ -77,10 +96,10 @@ func (md *MilvusVS) Search(ctx context.Context, queryVector biz.Vector, topK int
 	if topK <= 0 {
 		return nil, fmt.Errorf("topK 必须大于 0")
 	}
-	result, err := md.client.Search(
-		ctx,
+
+	result, err := md.client.Search(ctx,
 		milvusclient.NewSearchOption(md.collection, topK, []entity.Vector{entity.FloatVector(queryVector)}).
-			WithOutputFields("source_file_path", "title", "content", "chunk_index", "created_at", "updated_at", "rune_start_offset", "rune_end_offset"))
+			WithOutputFields(getOutputFields()...))
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +109,17 @@ func (md *MilvusVS) Search(ctx context.Context, queryVector biz.Vector, topK int
 
 	// 只有一个 queryVector, result 只有一个结果, 即基于该 vector 得到的结果
 	return parseSearchResToRagChunk(&result[0])
+}
+
+func (md *MilvusVS) GetChunkIteratorByDocumentId(ctx context.Context, documentId string) (milvusclient.QueryIterator, error) {
+	queryIterator, err := md.client.QueryIterator(ctx, milvusclient.NewQueryIteratorOption(md.collection).
+		WithFilter(fmt.Sprintf("document_id = %s", documentId)).
+		WithOutputFields(getOutputFields()...).
+		WithBatchSize(md.batchSize))
+	if err != nil {
+		return nil, fmt.Errorf("milvus 查询 documentId %s 失败: %w", documentId, err)
+	}
+	return queryIterator, nil
 }
 
 // ResetCollection 删除并重新创建 Milvus collection。
@@ -135,7 +165,7 @@ func (md *MilvusVS) InitCollections(ctx context.Context) error {
 	if exists == false {
 		schema := entity.NewSchema().WithDynamicFieldEnabled(true)
 		schema.WithField(entity.NewField().WithName("id").WithDataType(entity.FieldTypeInt64).WithIsPrimaryKey(true))
-		schema.WithField(entity.NewField().WithName("document_id").WithDataType(entity.FieldTypeVarChar).WithMaxLength(128).WithIsPrimaryKey(true).WithIsAutoID(false))
+		schema.WithField(entity.NewField().WithName("document_id").WithDataType(entity.FieldTypeVarChar).WithMaxLength(128).WithIsAutoID(false))
 		schema.WithField(entity.NewField().WithName("source_file_path").WithDataType(entity.FieldTypeVarChar).WithMaxLength(512))
 		schema.WithField(entity.NewField().WithName("chunk_index").WithDataType(entity.FieldTypeInt32))
 		schema.WithField(entity.NewField().WithName("chunk_hash").WithDataType(entity.FieldTypeVarChar).WithMaxLength(64))
@@ -170,9 +200,9 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 	if searchRes == nil {
 		return nil, fmt.Errorf("Milvus 检索结果为空")
 	}
-	ret := make([]*biz.SearchResult, len(searchRes.Scores))
+	ret := make([]*biz.SearchResult, searchRes.Len())
 	var err error
-	for i := 0; i < len(searchRes.Scores); i++ {
+	for i := 0; i < searchRes.Len(); i++ {
 		ret[i] = &biz.SearchResult{Chunk: &biz.Chunk{}}
 		searchFilePathColumn := searchRes.GetColumn("source_file_path")
 		chunkHashColumn := searchRes.GetColumn("chunk_hash")
@@ -256,4 +286,8 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 // 示例: `formatColumnParseError(column, err)`。
 func formatColumnParseError(column column.Column, err error) error {
 	return fmt.Errorf("获取字段 %s 出错: %v", column.Name(), err)
+}
+
+func getOutputFields() []string {
+	return []string{"id", "document_id", "source_file_path", "title", "content", "chunk_index", "chunk_hash", "created_at", "updated_at", "rune_start_offset", "rune_end_offset"}
 }

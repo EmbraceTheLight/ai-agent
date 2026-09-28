@@ -8,11 +8,29 @@ import (
 	"go-ai-agent/app/rag-api/internal/biz"
 	"math"
 	"sync"
+
+	"github.com/milvus-io/milvus/client/v2/milvusclient"
 )
 
 type memoryVectorStore struct {
 	mu         sync.RWMutex
 	embeddings []*biz.Embedding
+}
+
+func (v *memoryVectorStore) GetAllChunkByDocumentIdList(ctx context.Context, documentId []string) ([]*biz.Chunk, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (v *memoryVectorStore) GetChunkIteratorByDocumentId(ctx context.Context, documentId string) (milvusclient.QueryIterator, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (v *memoryVectorStore) GetAllChunkByDocumentId(ctx context.Context, documentId string) ([]*biz.Chunk, error) {
+
+	//TODO implement me
+	panic("implement me")
 }
 
 // Add 向内存向量库中添加一条 chunk 向量记录。

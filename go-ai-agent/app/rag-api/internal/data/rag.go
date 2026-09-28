@@ -14,20 +14,14 @@ import (
 // 输出: 返回文档切分和 embedding 数量限制配置。
 // 示例: `NewRAGConfig(confData)` -> `&biz.RAGConfig{ChunkSize: 500, Overlap: 100}`。
 func NewRAGConfig(c *conf.Data) *biz.RAGConfig {
-	result := &biz.RAGConfig{
-		ChunkSize: 500,
-		Overlap:   100,
-	}
-	if c == nil || c.Rag == nil {
-		return result
-	}
-	if c.Rag.ChunkSize > 0 {
-		result.ChunkSize = int(c.Rag.ChunkSize)
-	}
-	if c.Rag.Overlap > 0 {
-		result.Overlap = int(c.Rag.Overlap)
-	}
+	result := &biz.RAGConfig{}
+	result.ChunkSize = int(c.Rag.ChunkSize)
+	result.Overlap = int(c.Rag.Overlap)
+	result.EmbeddingDim = int(c.Embedder.Dim)
+	result.EmbeddingMethod = c.Embedder.Method
+	result.EmbeddingModel = c.Embedder.Model
 	result.LimitChunks = int(c.Rag.LimitChunks)
+
 	return result
 }
 
@@ -57,6 +51,7 @@ func NewVectorStore(data *Data, c *conf.Data) (biz.VectorStore, error) {
 		store := &MilvusVS{
 			client:     data.milvusClient,
 			collection: milvusConf.Collection,
+			batchSize:  int(milvusConf.BatchQuerySize),
 			dim:        int(embedderConf.Dim),
 		}
 		ctx, cancel := contextWithTimeout()

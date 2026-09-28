@@ -7,9 +7,10 @@ import (
 	"go-ai-agent/app/rag-api/internal/data/dal/query"
 	"go-ai-agent/internal/config"
 	"go-ai-agent/internal/utils"
+	"strings"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"strings"
 
 	"github.com/google/wire"
 	"github.com/milvus-io/milvus/client/v2/milvusclient"
@@ -23,6 +24,7 @@ var ProviderSet = wire.NewSet(
 	NewMySQL,
 
 	NewEmbedderRepo,
+	NewDocumentMetadataRepo,
 	NewVectorStore,
 	NewRAGConfig,
 	NewDocumentLoader,

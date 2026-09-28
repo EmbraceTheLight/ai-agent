@@ -3,8 +3,13 @@ package biz
 import (
 	"context"
 	"fmt"
+	"go-ai-agent/app/rag-api/internal/utils"
 	"log/slog"
+	"sort"
 	"strings"
+
+	"github.com/milvus-io/milvus/client/v2/milvusclient"
+	"golang.org/x/exp/slices"
 )
 
 // VectorStore 定义 RAG 阶段最小向量库能力。
@@ -23,6 +28,9 @@ type VectorStore interface {
 	// 输出: 返回按相似度降序排列的结果。
 	// 示例: `Search(ctx, Vector{1, 0}, 2)`。
 	Search(ctx context.Context, queryVector Vector, topK int) ([]*SearchResult, error)
+
+	GetAllChunkByDocumentIdList(ctx context.Context, documentId []string) ([]*Chunk, error)
+	GetChunkIteratorByDocumentId(ctx context.Context, documentId string) (milvusclient.QueryIterator, error)
 }
 
 // RAGConfig 保存 RAG 用例所需的运行参数。
@@ -30,9 +38,12 @@ type VectorStore interface {
 // 输出: 为文档切分和 embedding 数量限制提供配置。
 // 示例: `&RAGConfig{ChunkSize: 500, Overlap: 100}`。
 type RAGConfig struct {
-	ChunkSize   int
-	Overlap     int
-	LimitChunks int
+	ChunkSize       int
+	Overlap         int
+	EmbeddingModel  string
+	EmbeddingMethod string
+	EmbeddingDim    int
+	LimitChunks     int
 }
 
 // ImportResult 描述一次文档导入的统计结果。
@@ -59,19 +70,20 @@ type AskResult struct {
 // 输出: 提供可被 service 调用的完整 RAG 用例。
 // 示例: `usecase.ImportDocuments(ctx, "testdata/documents")`。
 type RAGUsecase struct {
-	loader      DocumentLoader
-	embedder    Embedder
-	vectorStore VectorStore
-	llm         LLM
-	config      *RAGConfig
-	log         *slog.Logger
+	loader           DocumentLoader
+	embedder         Embedder
+	documentMetadata DocumentMetadataRepo
+	vectorStore      VectorStore
+	llm              LLM
+	config           *RAGConfig
+	log              *slog.Logger
 }
 
 // NewRAGUsecase 创建 RAG 用例。
 // 输入: `loader`、`embedder`、`vectorStore` 和 `llm` 是 RAG 外部能力端口, `config` 是运行参数, `log` 是结构化日志对象。
 // 输出: 返回可执行文档导入和问答流程的 RAG 用例。
 // 示例: `NewRAGUsecase(loader, embedder, store, llm, cfg, slog.Default())`。
-func NewRAGUsecase(loader DocumentLoader, embedder Embedder, vectorStore VectorStore, llm LLM, config *RAGConfig, log *slog.Logger) *RAGUsecase {
+func NewRAGUsecase(loader DocumentLoader, embedder Embedder, vectorStore VectorStore, llm LLM, docMetadata DocumentMetadataRepo, config *RAGConfig, log *slog.Logger) *RAGUsecase {
 	if config == nil {
 		config = &RAGConfig{ChunkSize: 500, Overlap: 100}
 	}
@@ -79,12 +91,13 @@ func NewRAGUsecase(loader DocumentLoader, embedder Embedder, vectorStore VectorS
 		log = slog.Default()
 	}
 	return &RAGUsecase{
-		loader:      loader,
-		embedder:    embedder,
-		vectorStore: vectorStore,
-		llm:         llm,
-		config:      config,
-		log:         log,
+		loader:           loader,
+		embedder:         embedder,
+		documentMetadata: docMetadata,
+		vectorStore:      vectorStore,
+		llm:              llm,
+		config:           config,
+		log:              log,
 	}
 }
 
@@ -115,6 +128,52 @@ func (usecase *RAGUsecase) ImportDocuments(ctx context.Context, path string) (*I
 	}
 
 	result := &ImportResult{Documents: len(docs)}
+	// TODO: 根据 mysql DocumentMetadata 中的元数据和 milvus rag_chunks 中的 chunk_hash 决定是否要对该 chunk 进行向量化并存储到 milvus 中. 跳过已存入 milvus 中的相同 chunk
+	// 3. 根据 document_id 获取 milvus 中的 chunk 记录. 同样使用映射表: key: `<document_id>:<chunk_index>` value: chunk data
+	// 无记录/chunk_hash 或 document_metadata 不匹配 -> embed & 插入 milvus & 更新 document_metadata(事务)
+	// 元数据 & hash 匹配: 跳过当前 chunk
+	// 计算 & 收集 document_id, 并生成 document_id -> doc_metadata 的元数据映射表
+	documentIdList := make([]string, len(docs))
+	for i, doc := range docs {
+		absFilePath, err := utils.GetAbsPath(doc.SourcePath)
+		if err != nil {
+			usecase.log.ErrorContext(ctx, "获取文档绝对路径失败",
+				"document_title", doc.Title,
+				"document_path", doc.SourcePath,
+				"error", err.Error(),
+			)
+			continue
+		}
+		sha256Hex := utils.GetSHA256HexString(absFilePath)
+		documentIdList[i] = sha256Hex
+	}
+	docMetaList, err := usecase.documentMetadata.GetDocumentMetadataList(documentIdList)
+	if err != nil {
+		return nil, fmt.Errorf("查询文档元数据失败: %w", err)
+	}
+	docMetaMap := make(map[string]*DocumentMetadataDO)
+	for _, docMeta := range docMetaList {
+		docMetaMap[docMeta.Id] = docMeta
+	}
+
+	// 收集 chunk, 并创建 document_id -> chunk 的映射表
+	chunkList, err := usecase.vectorStore.GetAllChunkByDocumentIdList(ctx, documentIdList)
+	if err != nil {
+		return nil, fmt.Errorf("查询文档 chunk 失败: %w", err)
+	}
+	docChunkMap := make(map[string][]*Chunk)
+	for _, chunk := range chunkList {
+		docChunkMap[chunk.DocumentId] = append(docChunkMap[chunk.DocumentId], chunk)
+	}
+
+	// 对每个文档的 chunk 按照 index 进行排序
+	for key := range docChunkMap {
+		sort.Slice(docChunkMap[key], func(i, j int) bool {
+			return docChunkMap[key][i].ChunkIndex < docChunkMap[key][j].ChunkIndex
+		})
+	}
+
+	// 收集所有 chunks
 	for _, doc := range docs {
 		chunks, err := doc.Split(ChunkConfig{
 			Size:    usecase.config.ChunkSize,
@@ -194,6 +253,27 @@ func (usecase *RAGUsecase) Ask(ctx context.Context, question string, topK int) (
 		return nil, fmt.Errorf("检索相关 chunk 失败: %w", err)
 	}
 
+	// 获取 chunk 标题
+	// 1. 统计 chunk 列表中包含的 document_id
+	seen := make(map[string]struct{})
+	documentIdList := make([]string, 0)
+	for _, res := range searchResults {
+		if _, ok := seen[res.Chunk.DocumentId]; ok {
+			continue
+		}
+		seen[res.Chunk.DocumentId] = struct{}{}
+		documentIdList = append(documentIdList, res.Chunk.DocumentId)
+	}
+
+	// 2. 查询 document_metadata 获取 document_id 对应的标题
+	idTitleMap, err := usecase.documentMetadata.GetDocumentTitleByIdList(documentIdList)
+	if err != nil {
+		return nil, fmt.Errorf("查询 document_metadata 失败: %w", err)
+	}
+	// 2.1 为每个 chunk 的 Title 字段赋值
+	for i := range searchResults {
+		searchResults[i].Chunk.Title = idTitleMap[searchResults[i].Chunk.DocumentId]
+	}
 	answer, err := usecase.llm.Generate(ctx, BuildPrompt(searchResults), question)
 	if err != nil {
 		return nil, fmt.Errorf("生成 RAG 回答失败: %w", err)
@@ -215,4 +295,42 @@ func chunkTexts(chunks []*Chunk, limit int) []string {
 		texts = append(texts, chunks[i].Content)
 	}
 	return texts
+}
+
+// 查询并返回需要更新的 Chunk
+func (usecase *RAGUsecase) getChunkNeedUpsert(chunks []*Chunk, docMetaMap map[string]*DocumentMetadataDO, docChunkMap map[string][]*Chunk) []*Chunk {
+	ret := make([]*Chunk, 0, len(chunks))
+	for _, chunk := range chunks {
+		idx, ok := slices.BinarySearchFunc(docChunkMap[chunk.DocumentId], chunk, func(cur, target *Chunk) int {
+			if cur.ChunkIndex == target.ChunkIndex {
+				return 0
+			} else if cur.ChunkIndex > target.ChunkIndex {
+				return 1
+			} else {
+				return -1
+			}
+		})
+		// chunk 在已存储于 milvus 的对应 document 的 chunk 列表中没有找到, 应当插入
+		if !ok || usecase.isChunkNeedUpsert(chunk, docMetaMap[chunk.DocumentId], docChunkMap[chunk.DocumentId][idx]) {
+			ret = append(ret, chunk)
+			continue
+		}
+	}
+	return ret
+}
+
+func (usecase *RAGUsecase) isChunkNeedUpsert(srcChunk *Chunk, docMeta *DocumentMetadataDO, targetChunk *Chunk) bool {
+	// 1. 比较 doc 元数据: embedding 所用模型, embeddnig 所用方法, embedding 维度, 每块 chunk 大小, 每个 chunk overlap 大小
+	if usecase.config.EmbeddingModel != docMeta.EmbeddingModel ||
+		usecase.config.EmbeddingMethod != docMeta.EmbeddingMethod ||
+		usecase.config.EmbeddingDim != docMeta.EmbeddingDim ||
+		usecase.config.ChunkSize != docMeta.ChunkSize ||
+		usecase.config.Overlap != docMeta.ChunkOverlap {
+		return false
+	}
+	// 2. 比较同 index, chunk 内容是否改变:
+	if utils.GetSHA256HexString(srcChunk.Content) != targetChunk.ChunkHash {
+		return false
+	}
+	return true
 }

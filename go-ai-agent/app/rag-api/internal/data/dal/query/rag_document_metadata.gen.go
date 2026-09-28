@@ -37,6 +37,7 @@ func newRagDocumentMetadatum(db *gorm.DB, opts ...gen.DOOption) ragDocumentMetad
 	_ragDocumentMetadatum.ChunkSize = field.NewInt64(tableName, "chunk_size")
 	_ragDocumentMetadatum.ChunkOverlap = field.NewInt64(tableName, "chunk_overlap")
 	_ragDocumentMetadatum.LastIndexedAt = field.NewTime(tableName, "last_indexed_at")
+	_ragDocumentMetadatum.EmbeddingMethod = field.NewString(tableName, "embedding_method")
 
 	_ragDocumentMetadatum.fillFieldMap()
 
@@ -47,16 +48,17 @@ func newRagDocumentMetadatum(db *gorm.DB, opts ...gen.DOOption) ragDocumentMetad
 type ragDocumentMetadatum struct {
 	ragDocumentMetadatumDo
 
-	ALL            field.Asterisk
-	DocumentID     field.String
-	SourcePath     field.String // document 路径
-	Title          field.String // document 标题
-	CollectionName field.String // milvus collection 名称
-	EmbeddingModel field.String // 对 chunk 进行 embed 的模型名称
-	EmbeddingDim   field.Int64  // embed 切分出的向量维度
-	ChunkSize      field.Int64  // chunk 大小,  即一个 chunk 的长度
-	ChunkOverlap   field.Int64  // 一个 chunk 包含前一个 chunk 的多少个字符
-	LastIndexedAt  field.Time   // 上次为该 document chunk 进行向量化的时间
+	ALL             field.Asterisk
+	DocumentID      field.String
+	SourcePath      field.String // document 路径
+	Title           field.String // document 标题
+	CollectionName  field.String // milvus collection 名称
+	EmbeddingModel  field.String // 对 chunk 进行 embed 的模型名称
+	EmbeddingDim    field.Int64  // embed 切分出的向量维度
+	ChunkSize       field.Int64  // chunk 大小,  即一个 chunk 的长度
+	ChunkOverlap    field.Int64  // 一个 chunk 包含前一个 chunk 的多少个字符
+	LastIndexedAt   field.Time   // 上次为该 document chunk 进行向量化的时间
+	EmbeddingMethod field.String
 
 	fieldMap map[string]field.Expr
 }
@@ -82,6 +84,7 @@ func (r *ragDocumentMetadatum) updateTableName(table string) *ragDocumentMetadat
 	r.ChunkSize = field.NewInt64(table, "chunk_size")
 	r.ChunkOverlap = field.NewInt64(table, "chunk_overlap")
 	r.LastIndexedAt = field.NewTime(table, "last_indexed_at")
+	r.EmbeddingMethod = field.NewString(table, "embedding_method")
 
 	r.fillFieldMap()
 
@@ -98,7 +101,7 @@ func (r *ragDocumentMetadatum) GetFieldByName(fieldName string) (field.OrderExpr
 }
 
 func (r *ragDocumentMetadatum) fillFieldMap() {
-	r.fieldMap = make(map[string]field.Expr, 9)
+	r.fieldMap = make(map[string]field.Expr, 10)
 	r.fieldMap["document_id"] = r.DocumentID
 	r.fieldMap["source_path"] = r.SourcePath
 	r.fieldMap["title"] = r.Title
@@ -108,6 +111,7 @@ func (r *ragDocumentMetadatum) fillFieldMap() {
 	r.fieldMap["chunk_size"] = r.ChunkSize
 	r.fieldMap["chunk_overlap"] = r.ChunkOverlap
 	r.fieldMap["last_indexed_at"] = r.LastIndexedAt
+	r.fieldMap["embedding_method"] = r.EmbeddingMethod
 }
 
 func (r ragDocumentMetadatum) clone(db *gorm.DB) ragDocumentMetadatum {
