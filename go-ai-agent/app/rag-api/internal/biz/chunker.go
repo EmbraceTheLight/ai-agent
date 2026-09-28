@@ -1,6 +1,8 @@
 package biz
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -33,8 +35,10 @@ func (doc *Document) Split(config ChunkConfig) ([]*Chunk, error) {
 			end = len(runes)
 		}
 		timestamp := time.Now().UnixMilli()
+		res := sha256.Sum256([]byte(doc.Content[start:end]))
+		sha256Str := hex.EncodeToString(res[:])
 		chunk := &Chunk{
-			Title:           doc.Title,
+			ChunkHash:       sha256Str,
 			SourceFile:      doc.SourcePath,
 			RuneStartOffset: int64(start),
 			RuneEndOffset:   int64(end),

@@ -21,9 +21,10 @@ type Embedding struct {
 // 示例: `Chunk{SourceFile: "notes/rag.md", ChunkIndex: 0, Content: "RAG"}`。
 type Chunk struct {
 	SourceFile string // 源文件路径
-	Title      string // markdown 文件标题, Trilium 中只有标题格式为 `# <title>`
+	//Title      string // markdown 文件标题, Trilium 中只有标题格式为 `# <title>`
 	ChunkIndex int64  // Chunk 索引
 	Content    string // 分块内容
+	ChunkHash  string // 分块 hash 值, 使用 sha256 计算, 用于再次导入该文档时比较当前 chunk 是否有更新
 	CreatedAt  int64  // 创建时间时间戳
 	UpdatedAt  int64  // 更新时间时间戳
 

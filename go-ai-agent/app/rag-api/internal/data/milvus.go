@@ -51,7 +51,7 @@ func (md *MilvusVS) Add(ctx context.Context, vector biz.Vector, chunk *biz.Chunk
 		milvusclient.NewColumnBasedInsertOption(md.collection).
 			WithInt64Column("id", []int64{utils.GetID()}).
 			WithVarcharColumn("source_file_path", []string{chunk.SourceFile}).
-			WithVarcharColumn("title", []string{chunk.Title}).
+			WithVarcharColumn("chunk_hash", []string{chunk.ChunkHash}).
 			WithInt32Column("chunk_index", []int32{int32(chunk.ChunkIndex)}).
 			WithVarcharColumn("content", []string{chunk.Content}).
 			WithInt64Column("created_at", []int64{chunk.CreatedAt}).
@@ -135,9 +135,10 @@ func (md *MilvusVS) InitCollections(ctx context.Context) error {
 	if exists == false {
 		schema := entity.NewSchema().WithDynamicFieldEnabled(true)
 		schema.WithField(entity.NewField().WithName("id").WithDataType(entity.FieldTypeInt64).WithIsPrimaryKey(true))
+		schema.WithField(entity.NewField().WithName("document_id").WithDataType(entity.FieldTypeVarChar).WithMaxLength(128).WithIsPrimaryKey(true).WithIsAutoID(false))
 		schema.WithField(entity.NewField().WithName("source_file_path").WithDataType(entity.FieldTypeVarChar).WithMaxLength(512))
-		schema.WithField(entity.NewField().WithName("title").WithDataType(entity.FieldTypeVarChar).WithMaxLength(256))
 		schema.WithField(entity.NewField().WithName("chunk_index").WithDataType(entity.FieldTypeInt32))
+		schema.WithField(entity.NewField().WithName("chunk_hash").WithDataType(entity.FieldTypeVarChar).WithMaxLength(64))
 		schema.WithField(entity.NewField().WithName("content").WithDataType(entity.FieldTypeVarChar).WithMaxLength(4096))
 		schema.WithField(entity.NewField().WithName("created_at").WithDataType(entity.FieldTypeInt64))
 		schema.WithField(entity.NewField().WithName("updated_at").WithDataType(entity.FieldTypeInt64))
@@ -174,7 +175,7 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 	for i := 0; i < len(searchRes.Scores); i++ {
 		ret[i] = &biz.SearchResult{Chunk: &biz.Chunk{}}
 		searchFilePathColumn := searchRes.GetColumn("source_file_path")
-		titleColumn := searchRes.GetColumn("title")
+		chunkHashColumn := searchRes.GetColumn("chunk_hash")
 		chunkIndexColumn := searchRes.GetColumn("chunk_index")
 		contentColumn := searchRes.GetColumn("content")
 		creationTimeColumn := searchRes.GetColumn("created_at")
@@ -184,8 +185,8 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 		if searchFilePathColumn == nil {
 			return nil, fmt.Errorf("字段 source_file_path 为 nil")
 		}
-		if titleColumn == nil {
-			return nil, fmt.Errorf("字段 title 为 nil")
+		if chunkHashColumn == nil {
+			return nil, fmt.Errorf("字段 chunk_hash 为 nil")
 		}
 		if chunkIndexColumn == nil {
 			return nil, fmt.Errorf("字段 chunk_index 为 nil")
@@ -230,9 +231,9 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 			return nil, formatColumnParseError(updatedTimeColumn, err)
 		}
 
-		ret[i].Chunk.Title, err = titleColumn.GetAsString(i)
+		ret[i].Chunk.ChunkHash, err = chunkHashColumn.GetAsString(i)
 		if err != nil {
-			return nil, formatColumnParseError(titleColumn, err)
+			return nil, formatColumnParseError(chunkHashColumn, err)
 		}
 
 		ret[i].Chunk.RuneStartOffset, err = runeStartOffsetColumn.GetAsInt64(i)
