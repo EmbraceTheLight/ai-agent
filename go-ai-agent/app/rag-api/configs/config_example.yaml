@@ -16,7 +16,7 @@ data:
     port: <mysql port>
     user: <mysql user>
     password: <mysql_password>
-    database: milvus
+    database: ai_agent
     max_idle: 10
     max_open: 100
   milvus:
