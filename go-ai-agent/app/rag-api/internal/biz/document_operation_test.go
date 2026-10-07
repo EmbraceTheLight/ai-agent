@@ -23,7 +23,7 @@ func TestDocumentSplit(t *testing.T) {
 	if chunks[0].Content != "abcdef" || chunks[1].Content != "efghij" {
 		t.Fatalf("unexpected chunk contents: %q, %q", chunks[0].Content, chunks[1].Content)
 	}
-	if chunks[0].SourceFile != doc.SourcePath || chunks[0].Title != doc.Title || chunks[1].ChunkIndex != 1 {
+	if chunks[0].SourceFile != doc.SourcePath || chunks[0].RuneStartOffset != 0 || chunks[1].ChunkIndex != 1 || chunks[1].RuneStartOffset != 4 {
 		t.Fatalf("unexpected chunk metadata: %+v, %+v", chunks[0], chunks[1])
 	}
 }

@@ -491,13 +491,14 @@ func (x *Data_Mysql) GetLogLevel() int32 {
 }
 
 type Data_Milvus struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Addr          string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
-	Collection    string                 `protobuf:"bytes,2,opt,name=collection,proto3" json:"collection,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	Password      string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Addr           string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
+	Collection     string                 `protobuf:"bytes,2,opt,name=collection,proto3" json:"collection,omitempty"`
+	BatchQuerySize int32                  `protobuf:"varint,3,opt,name=batch_query_size,json=batchQuerySize,proto3" json:"batch_query_size,omitempty"`
+	Username       string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
+	Password       string                 `protobuf:"bytes,5,opt,name=password,proto3" json:"password,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Data_Milvus) Reset() {
@@ -544,6 +545,13 @@ func (x *Data_Milvus) GetCollection() string {
 	return ""
 }
 
+func (x *Data_Milvus) GetBatchQuerySize() int32 {
+	if x != nil {
+		return x.BatchQuerySize
+	}
+	return 0
+}
+
 func (x *Data_Milvus) GetUsername() string {
 	if x != nil {
 		return x.Username
@@ -563,6 +571,7 @@ type Data_Embedder struct {
 	BaseUrl       string                 `protobuf:"bytes,1,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
 	Model         string                 `protobuf:"bytes,2,opt,name=model,proto3" json:"model,omitempty"`
 	Dim           int32                  `protobuf:"varint,3,opt,name=dim,proto3" json:"dim,omitempty"`
+	Method        string                 `protobuf:"bytes,4,opt,name=method,proto3" json:"method,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -616,6 +625,13 @@ func (x *Data_Embedder) GetDim() int32 {
 		return x.Dim
 	}
 	return 0
+}
+
+func (x *Data_Embedder) GetMethod() string {
+	if x != nil {
+		return x.Method
+	}
+	return ""
 }
 
 type Data_Rag struct {
@@ -721,7 +737,7 @@ const file_conf_conf_proto_rawDesc = "" +
 	"\x04GRPC\x12\x18\n" +
 	"\anetwork\x18\x01 \x01(\tR\anetwork\x12\x12\n" +
 	"\x04addr\x18\x02 \x01(\tR\x04addr\x123\n" +
-	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\xd1\a\n" +
+	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\x94\b\n" +
 	"\x04Data\x12,\n" +
 	"\x05model\x18\x01 \x01(\v2\x16.kratos.api.Data.ModelR\x05model\x12,\n" +
 	"\x05mysql\x18\x02 \x01(\v2\x16.kratos.api.Data.MysqlR\x05mysql\x12/\n" +
@@ -742,18 +758,20 @@ const file_conf_conf_proto_rawDesc = "" +
 	"\bdatabase\x18\x05 \x01(\tR\bdatabase\x12\x19\n" +
 	"\bmax_idle\x18\x06 \x01(\x05R\amaxIdle\x12\x19\n" +
 	"\bmax_open\x18\a \x01(\x05R\amaxOpen\x12\x1b\n" +
-	"\tlog_level\x18\b \x01(\x05R\blogLevel\x1at\n" +
+	"\tlog_level\x18\b \x01(\x05R\blogLevel\x1a\x9e\x01\n" +
 	"\x06Milvus\x12\x12\n" +
 	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x1e\n" +
 	"\n" +
 	"collection\x18\x02 \x01(\tR\n" +
-	"collection\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\x12\x1a\n" +
-	"\bpassword\x18\x04 \x01(\tR\bpassword\x1aM\n" +
+	"collection\x12(\n" +
+	"\x10batch_query_size\x18\x03 \x01(\x05R\x0ebatchQuerySize\x12\x1a\n" +
+	"\busername\x18\x04 \x01(\tR\busername\x12\x1a\n" +
+	"\bpassword\x18\x05 \x01(\tR\bpassword\x1ae\n" +
 	"\bEmbedder\x12\x19\n" +
 	"\bbase_url\x18\x01 \x01(\tR\abaseUrl\x12\x14\n" +
 	"\x05model\x18\x02 \x01(\tR\x05model\x12\x10\n" +
-	"\x03dim\x18\x03 \x01(\x05R\x03dim\x1a\xce\x01\n" +
+	"\x03dim\x18\x03 \x01(\x05R\x03dim\x12\x16\n" +
+	"\x06method\x18\x04 \x01(\tR\x06method\x1a\xce\x01\n" +
 	"\x03Rag\x12!\n" +
 	"\fvector_store\x18\x01 \x01(\tR\vvectorStore\x12\x1d\n" +
 	"\n" +

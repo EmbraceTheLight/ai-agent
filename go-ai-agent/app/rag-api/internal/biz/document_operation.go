@@ -15,8 +15,9 @@ type DocumentLoader interface {
 // Document 表示从本地文件加载得到的一篇文档。
 // 输入: `SourcePath` 是源文件路径, `Content` 是完整文本内容。
 // 输出: 供 `Split` 切分为多个 `Chunk`。
-// 示例: `Document{SourcePath: "notes/rag.md", Content: "# RAG"}`。
+// 示例: `Document{DocumentId: "abcdefg", Title: "RAG document", SourcePath: "notes/rag.md", Content: "# RAG"}`。
 type Document struct {
+	DocumentId string
 	Title      string
 	SourcePath string
 	Content    string
@@ -25,8 +26,9 @@ type Document struct {
 // ChunkConfig 保存文档切分所需的参数。
 // 输入: `Size` 是单个 chunk 的最大 rune 数, `Overlap` 是相邻 chunk 重叠的 rune 数。
 // 输出: 供 `Document.Split` 执行固定大小切分。
-// 示例: `ChunkConfig{Size: 500, Overlap: 100}`。
+// 示例: `ChunkConfig{Size: 500, Overlap: 100, DocumentId: "abcdefg"}`。
 type ChunkConfig struct {
-	Size    int
-	Overlap int
+	Size       int
+	Overlap    int
+	DocumentId string
 }

@@ -1,9 +1,8 @@
 package biz
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
+	"go-ai-agent/app/rag-api/internal/utils"
 	"strings"
 	"time"
 )
@@ -35,10 +34,9 @@ func (doc *Document) Split(config ChunkConfig) ([]*Chunk, error) {
 			end = len(runes)
 		}
 		timestamp := time.Now().UnixMilli()
-		res := sha256.Sum256([]byte(doc.Content[start:end]))
-		sha256Str := hex.EncodeToString(res[:])
 		chunk := &Chunk{
-			ChunkHash:       sha256Str,
+			Id:              utils.GetID(),
+			DocumentId:      config.DocumentId,
 			SourceFile:      doc.SourcePath,
 			RuneStartOffset: int64(start),
 			RuneEndOffset:   int64(end),
@@ -51,6 +49,7 @@ func (doc *Document) Split(config ChunkConfig) ([]*Chunk, error) {
 		}
 
 		chunk.Content = sb.String()
+		chunk.ChunkHash = utils.GetSHA256HexString(chunk.Content)
 		sb.Reset()
 		chunks = append(chunks, chunk)
 

@@ -45,13 +45,15 @@ message Data {
   message Milvus {
     string addr = 1;
     string collection = 2;
-    string username = 3;
-    string password = 4;
+    int32 batch_query_size = 3;
+    string username = 4;
+    string password = 5;
   }
   message Embedder {
     string base_url = 1;
     string model = 2;
     int32 dim = 3;
+    string method = 4;
   }
   message Rag {
     string vector_store = 1;

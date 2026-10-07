@@ -22,11 +22,13 @@ data:
   milvus:
     addr: <ip:port>
     collection: rag_chunks
+    batch_query_size: 1000  # 每批最多查询 1000 条记录
     username: <milvus user>
     password: <milvus password>
   embedder:
     base_url: <base_embedding_model_ip:port>
     model: qwen3-embedding:0.6b
+    method: COSINE
     dim: 1024
   rag:
     vector_store: milvus

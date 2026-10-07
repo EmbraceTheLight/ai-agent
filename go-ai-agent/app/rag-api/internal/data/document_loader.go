@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"go-ai-agent/app/rag-api/internal/biz"
 	"go-ai-agent/app/rag-api/internal/conf"
-	"go-ai-agent/internal/utils"
+	"go-ai-agent/app/rag-api/internal/utils"
 	"io/fs"
 	"log"
 	"log/slog"
@@ -93,13 +93,17 @@ func (l *loader) parseDocument(filepath string) (*biz.Document, error) {
 	if utils.IsDir(filepath) == true {
 		return nil, fmt.Errorf("%s 是目录, 不是文件", filepath)
 	}
-	doc := &biz.Document{SourcePath: filepath}
-	fileContent, err := os.ReadFile(filepath)
+	absFilePath, err := utils.GetAbsPath(filepath)
+	if err != nil {
+		return nil, fmt.Errorf("获取路径 %s 的绝对路径失败: %w", filepath, err)
+	}
+	doc := &biz.Document{SourcePath: absFilePath}
+	fileContent, err := os.ReadFile(absFilePath)
 	if err != nil {
 		return nil, err
 	}
 	doc.Content = string(fileContent)
-	doc.Title = l.getDocTitle(filepath)
+	doc.Title = l.getDocTitle(absFilePath)
 	return doc, nil
 }
 
