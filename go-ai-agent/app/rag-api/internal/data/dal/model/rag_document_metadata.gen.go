@@ -12,15 +12,16 @@ const TableNameRagDocumentMetadatum = "rag_document_metadata"
 
 // RagDocumentMetadatum rag document 元数据
 type RagDocumentMetadatum struct {
-	DocumentID     string    `gorm:"column:document_id;type:varchar(128);primaryKey" json:"document_id"`
-	SourcePath     string    `gorm:"column:source_path;type:varchar(512);comment:document 路径" json:"source_path"`                         // document 路径
-	Title          string    `gorm:"column:title;type:varchar(256);comment:document 标题" json:"title"`                                     // document 标题
-	CollectionName string    `gorm:"column:collection_name;type:varchar(256);comment:milvus collection 名称" json:"collection_name"`        // milvus collection 名称
-	EmbeddingModel string    `gorm:"column:embedding_model;type:varchar(128);comment:对 chunk 进行 embed 的模型名称" json:"embedding_model"`      // 对 chunk 进行 embed 的模型名称
-	EmbeddingDim   int64     `gorm:"column:embedding_dim;type:int;comment:embed 切分出的向量维度" json:"embedding_dim"`                           // embed 切分出的向量维度
-	ChunkSize      int64     `gorm:"column:chunk_size;type:int;comment:chunk 大小,  即一个 chunk 的长度" json:"chunk_size"`                       // chunk 大小,  即一个 chunk 的长度
-	ChunkOverlap   int64     `gorm:"column:chunk_overlap;type:int;comment:一个 chunk 包含前一个 chunk 的多少个字符" json:"chunk_overlap"`              // 一个 chunk 包含前一个 chunk 的多少个字符
-	LastIndexedAt  time.Time `gorm:"column:last_indexed_at;type:datetime(3);comment:上次为该 document chunk 进行向量化的时间" json:"last_indexed_at"` // 上次为该 document chunk 进行向量化的时间
+	DocumentID      string    `gorm:"column:document_id;type:varchar(128);primaryKey" json:"document_id"`
+	SourcePath      string    `gorm:"column:source_path;type:varchar(512);comment:document 路径" json:"source_path"`                         // document 路径
+	Title           string    `gorm:"column:title;type:varchar(256);comment:document 标题" json:"title"`                                     // document 标题
+	CollectionName  string    `gorm:"column:collection_name;type:varchar(256);comment:milvus collection 名称" json:"collection_name"`        // milvus collection 名称
+	EmbeddingModel  string    `gorm:"column:embedding_model;type:varchar(128);comment:对 chunk 进行 embed 的模型名称" json:"embedding_model"`      // 对 chunk 进行 embed 的模型名称
+	EmbeddingDim    int64     `gorm:"column:embedding_dim;type:int;comment:embed 切分出的向量维度" json:"embedding_dim"`                           // embed 切分出的向量维度
+	ChunkSize       int64     `gorm:"column:chunk_size;type:int;comment:chunk 大小,  即一个 chunk 的长度" json:"chunk_size"`                       // chunk 大小,  即一个 chunk 的长度
+	ChunkOverlap    int64     `gorm:"column:chunk_overlap;type:int;comment:一个 chunk 包含前一个 chunk 的多少个字符" json:"chunk_overlap"`              // 一个 chunk 包含前一个 chunk 的多少个字符
+	LastIndexedAt   time.Time `gorm:"column:last_indexed_at;type:datetime(3);comment:上次为该 document chunk 进行向量化的时间" json:"last_indexed_at"` // 上次为该 document chunk 进行向量化的时间
+	EmbeddingMethod string    `gorm:"column:embedding_method;type:varchar(50)" json:"embedding_method"`
 }
 
 // TableName RagDocumentMetadatum's table name
