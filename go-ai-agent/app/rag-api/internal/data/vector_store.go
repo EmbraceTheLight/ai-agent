@@ -15,6 +15,68 @@ type memoryVectorStore struct {
 	embeddings []*biz.Embedding
 }
 
+// VisitDocumentChunks 将内存向量库中指定文档的 chunk 交给处理函数。
+// 输入: `documentId` 是文档 ID, `handle` 处理匹配的 chunk。
+// 输出: 返回上下文取消错误或处理函数错误; 成功时返回 nil。
+// 示例: `store.VisitDocumentChunks(ctx, id, func(chunks []*biz.Chunk) error { return nil })`。
+func (v *memoryVectorStore) VisitDocumentChunks(ctx context.Context, documentId string, handle func([]*biz.Chunk) error) error {
+	v.mu.RLock()
+	batch := make([]*biz.Chunk, 0)
+	for _, record := range v.embeddings {
+		if record.Chunk.DocumentId == documentId {
+			batch = append(batch, record.Chunk)
+		}
+	}
+	v.mu.RUnlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return handle(batch)
+}
+
+// UpsertBatch 按 chunk 物理 ID 更新或追加内存中的向量记录。
+// 输入: `records` 是待写入的 chunk 与向量列表。
+// 输出: 所有记录有效时返回 nil; chunk 或向量为空时返回错误。
+// 示例: `store.UpsertBatch(ctx, []*biz.Embedding{{Chunk: chunk, Vector: vector}})`。
+func (v *memoryVectorStore) UpsertBatch(ctx context.Context, records []*biz.Embedding) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	for _, record := range records {
+		if record == nil || record.Chunk == nil || len(record.Vector) == 0 {
+			return errors.New("chunk 或 vector 为空")
+		}
+		found := false
+		for i, old := range v.embeddings {
+			if old.Chunk.Id == record.Chunk.Id {
+				v.embeddings[i] = record
+				found = true
+				break
+			}
+		}
+		if !found {
+			v.embeddings = append(v.embeddings, record)
+		}
+	}
+	return nil
+}
+
+// DeleteChunksFromIndex 移除指定文档中序号不小于 from 的内存记录。
+// 输入: `documentId` 是文档 ID, `from` 是保留范围的末尾序号。
+// 输出: 删除完成返回 nil。
+// 示例: `store.DeleteChunksFromIndex(ctx, id, 3)`。
+func (v *memoryVectorStore) DeleteChunksFromIndex(ctx context.Context, documentId string, from int64) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	kept := v.embeddings[:0]
+	for _, record := range v.embeddings {
+		if record.Chunk.DocumentId != documentId || record.Chunk.ChunkIndex < from {
+			kept = append(kept, record)
+		}
+	}
+	v.embeddings = kept
+	return nil
+}
+
 // Add 向内存向量库中添加一条 chunk 向量记录。
 // 输入: `Vector` 是 chunk 的 embedding 向量, `chunk` 是带来源文件和序号的 chunk。
 // 输出: 成功时返回 nil; 向量为空或 chunk 为 nil 时返回错误。

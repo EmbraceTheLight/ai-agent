@@ -9,20 +9,11 @@ import (
 )
 
 // TestNewVectorStoreMemory 验证 memory 配置不创建 Milvus 连接且能够完成向量写入和检索。
-// 输入: 使用 memory vector_store 配置创建 Data 和 VectorStore。
+// 输入: 使用 memory vector_store 配置和空 Data 创建 VectorStore。
 // 输出: 断言向量库能返回按相似度降序排列的结果。
 // 示例: `go test ./app/rag-api/internal/data -run TestNewVectorStoreMemory`。
 func TestNewVectorStoreMemory(t *testing.T) {
-	data, cleanup, err := NewData(&conf.Data{
-		Embedder: &conf.Data_Embedder{BaseUrl: "http://localhost:11434", Model: "embedding", Dim: 2},
-		Rag:      &conf.Data_Rag{VectorStore: "memory"},
-	})
-	if err != nil {
-		t.Fatalf("NewData() error = %v", err)
-	}
-	defer cleanup()
-
-	store, err := NewVectorStore(data, &conf.Data{
+	store, err := NewVectorStore(&Data{}, &conf.Data{
 		Embedder: &conf.Data_Embedder{Dim: 2},
 		Rag:      &conf.Data_Rag{VectorStore: "memory"},
 	})

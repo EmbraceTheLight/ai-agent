@@ -42,8 +42,10 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger *slog.Logger) 
 		return nil, nil, err
 	}
 	llm := data.NewLLMRepo(confData)
+	documentMetadataRepo := data.NewDocumentMetadataRepo(dataData)
+	documentLockRepo := data.NewDocumentLockRepo()
 	ragConfig := data.NewRAGConfig(confData)
-	ragUsecase := biz.NewRAGUsecase(documentLoader, embedder, vectorStore, llm, ragConfig, logger)
+	ragUsecase := biz.NewRAGUsecase(documentLoader, embedder, vectorStore, llm, documentMetadataRepo, documentLockRepo, ragConfig, logger)
 	ragService := service.NewRagService(ragUsecase, logger)
 	grpcServer := server.NewGRPCServer(confServer, ragService)
 	httpServer := server.NewHTTPServer(confServer, ragService)

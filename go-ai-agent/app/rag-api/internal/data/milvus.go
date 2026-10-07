@@ -3,13 +3,12 @@ package data
 import (
 	"context"
 	"fmt"
-	"go-ai-agent/app/rag-api/internal/biz"
-	"go-ai-agent/internal/utils"
-
 	"github.com/milvus-io/milvus/client/v2/column"
 	"github.com/milvus-io/milvus/client/v2/entity"
 	"github.com/milvus-io/milvus/client/v2/index"
 	"github.com/milvus-io/milvus/client/v2/milvusclient"
+	"go-ai-agent/app/rag-api/internal/biz"
+	"io"
 )
 
 /* Milvus type */
@@ -29,7 +28,46 @@ type MilvusCollectionField struct {
 type MilvusVS struct {
 	client     *milvusclient.Client
 	collection string
+	batchSize  int
 	dim        int
+}
+
+// VisitDocumentChunks 按主键顺序遍历指定文档的旧 chunk。
+// 输入: `documentId` 是文档 ID, `handle` 逐批处理查询结果, `ctx` 控制读取。
+// 输出: 读完返回 nil; 查询、解析或处理批次失败时返回错误。
+// 示例: `store.VisitDocumentChunks(ctx, id, func(batch []*biz.Chunk) error { return nil })`。
+func (md *MilvusVS) VisitDocumentChunks(ctx context.Context, documentId string, handle func([]*biz.Chunk) error) error {
+	batchSize := md.batchSize
+	if batchSize <= 0 {
+		batchSize = 100
+	}
+	iterator, err := md.client.QueryIterator(ctx, milvusclient.NewQueryIteratorOption(md.collection).
+		WithFilter(fmt.Sprintf("document_id == %q", documentId)).
+		WithOutputFields(getOutputFields()...).WithBatchSize(batchSize).
+		WithConsistencyLevel(entity.ClStrong))
+	if err != nil {
+		return fmt.Errorf("创建 document %s iterator 失败: %w", documentId, err)
+	}
+	for {
+		res, err := iterator.Next(ctx)
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("读取 document %s chunk 失败: %w", documentId, err)
+		}
+		parsed, err := parseSearchResToRagChunk(&res)
+		if err != nil {
+			return err
+		}
+		batch := make([]*biz.Chunk, len(parsed))
+		for i, row := range parsed {
+			batch[i] = row.Chunk
+		}
+		if err := handle(batch); err != nil {
+			return err
+		}
+	}
 }
 
 // Add 向 Milvus 向量库添加一条 chunk 向量记录。
@@ -37,33 +75,68 @@ type MilvusVS struct {
 // 输出: 成功返回 nil; 向量维度、chunk 或 Milvus 请求非法时返回错误。
 // 示例: `store.Add(ctx, biz.Vector{1, 0}, chunk)`。
 func (md *MilvusVS) Add(ctx context.Context, vector biz.Vector, chunk *biz.Chunk) error {
+	return md.UpsertBatch(ctx, []*biz.Embedding{{Chunk: chunk, Vector: vector}})
+}
+
+// UpsertBatch 使用 chunk 的物理主键更新或插入一批向量记录。
+// 输入: `records` 包含非空 chunk、document ID 和符合 collection 维度的向量。
+// 输出: 批量写入成功返回 nil; 参数或 Milvus 请求失败时返回错误。
+// 示例: `store.UpsertBatch(ctx, []*biz.Embedding{{Chunk: chunk, Vector: vector}})`。
+func (md *MilvusVS) UpsertBatch(ctx context.Context, records []*biz.Embedding) error {
 	if md == nil || md.client == nil {
 		return fmt.Errorf("milvusClient client 未初始化")
 	}
-	if len(vector) != md.dim {
-		return fmt.Errorf("插入的向量维度为 %d, 期望为: %d", len(vector), md.dim)
+	if len(records) == 0 {
+		return nil
 	}
-	if chunk == nil {
-		return fmt.Errorf("传入的 chunk 为 nil")
+	ids := make([]int64, len(records))
+	documentIDs := make([]string, len(records))
+	paths := make([]string, len(records))
+	hashes := make([]string, len(records))
+	indices := make([]int32, len(records))
+	contents := make([]string, len(records))
+	created := make([]int64, len(records))
+	updated := make([]int64, len(records))
+	starts := make([]int32, len(records))
+	ends := make([]int32, len(records))
+	vectors := make([][]float32, len(records))
+	for i, record := range records {
+		if record == nil || record.Chunk == nil || record.Chunk.DocumentId == "" {
+			return fmt.Errorf("第 %d 条 chunk 或 document_id 为空", i)
+		}
+		if len(record.Vector) != md.dim {
+			return fmt.Errorf("第 %d 条向量维度为 %d, 期望 %d", i, len(record.Vector), md.dim)
+		}
+		chunk := record.Chunk
+		ids[i], documentIDs[i], paths[i] = chunk.Id, chunk.DocumentId, chunk.SourceFile
+		hashes[i], indices[i], contents[i] = chunk.ChunkHash, int32(chunk.ChunkIndex), chunk.Content
+		created[i], updated[i] = chunk.CreatedAt, chunk.UpdatedAt
+		starts[i], ends[i] = int32(chunk.RuneStartOffset), int32(chunk.RuneEndOffset)
+		vectors[i] = record.Vector
 	}
-	_, err := md.client.Insert(
-		ctx,
-		milvusclient.NewColumnBasedInsertOption(md.collection).
-			WithInt64Column("id", []int64{utils.GetID()}).
-			WithVarcharColumn("source_file_path", []string{chunk.SourceFile}).
-			WithVarcharColumn("chunk_hash", []string{chunk.ChunkHash}).
-			WithInt32Column("chunk_index", []int32{int32(chunk.ChunkIndex)}).
-			WithVarcharColumn("content", []string{chunk.Content}).
-			WithInt64Column("created_at", []int64{chunk.CreatedAt}).
-			WithInt64Column("updated_at", []int64{chunk.UpdatedAt}).
-			WithInt32Column("rune_start_offset", []int32{int32(chunk.RuneStartOffset)}).
-			WithInt32Column("rune_end_offset", []int32{int32(chunk.RuneEndOffset)}).
-			WithFloatVectorColumn("chunk_vector", md.dim, [][]float32{vector}),
-	)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := md.client.Upsert(ctx, milvusclient.NewColumnBasedInsertOption(md.collection).
+		WithInt64Column("id", ids).
+		WithVarcharColumn("document_id", documentIDs).
+		WithVarcharColumn("source_file_path", paths).
+		WithVarcharColumn("chunk_hash", hashes).
+		WithInt32Column("chunk_index", indices).
+		WithVarcharColumn("content", contents).
+		WithInt64Column("created_at", created).
+		WithInt64Column("updated_at", updated).
+		WithInt32Column("rune_start_offset", starts).
+		WithInt32Column("rune_end_offset", ends).
+		WithFloatVectorColumn("chunk_vector", md.dim, vectors))
+	return err
+}
+
+// DeleteChunksFromIndex 删除文档中序号不小于 from 的旧 chunk。
+// 输入: `documentId` 是文档 ID, `from` 是本次保留的 chunk 数量。
+// 输出: 删除成功返回 nil; Milvus 请求失败时返回错误。
+// 示例: `store.DeleteChunksFromIndex(ctx, id, int64(len(chunks)))`。
+func (md *MilvusVS) DeleteChunksFromIndex(ctx context.Context, documentId string, from int64) error {
+	_, err := md.client.Delete(ctx, milvusclient.NewDeleteOption(md.collection).
+		WithExpr(fmt.Sprintf("document_id == %q && chunk_index >= %d", documentId, from)))
+	return err
 }
 
 // Search 在 Milvus 中检索与 queryVector 最相似的 topK 个 chunk。
@@ -77,10 +150,10 @@ func (md *MilvusVS) Search(ctx context.Context, queryVector biz.Vector, topK int
 	if topK <= 0 {
 		return nil, fmt.Errorf("topK 必须大于 0")
 	}
-	result, err := md.client.Search(
-		ctx,
+
+	result, err := md.client.Search(ctx,
 		milvusclient.NewSearchOption(md.collection, topK, []entity.Vector{entity.FloatVector(queryVector)}).
-			WithOutputFields("source_file_path", "title", "content", "chunk_index", "created_at", "updated_at", "rune_start_offset", "rune_end_offset"))
+			WithOutputFields(getOutputFields()...))
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +208,7 @@ func (md *MilvusVS) InitCollections(ctx context.Context) error {
 	if exists == false {
 		schema := entity.NewSchema().WithDynamicFieldEnabled(true)
 		schema.WithField(entity.NewField().WithName("id").WithDataType(entity.FieldTypeInt64).WithIsPrimaryKey(true))
-		schema.WithField(entity.NewField().WithName("document_id").WithDataType(entity.FieldTypeVarChar).WithMaxLength(128).WithIsPrimaryKey(true).WithIsAutoID(false))
+		schema.WithField(entity.NewField().WithName("document_id").WithDataType(entity.FieldTypeVarChar).WithMaxLength(128).WithIsAutoID(false))
 		schema.WithField(entity.NewField().WithName("source_file_path").WithDataType(entity.FieldTypeVarChar).WithMaxLength(512))
 		schema.WithField(entity.NewField().WithName("chunk_index").WithDataType(entity.FieldTypeInt32))
 		schema.WithField(entity.NewField().WithName("chunk_hash").WithDataType(entity.FieldTypeVarChar).WithMaxLength(64))
@@ -170,10 +243,15 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 	if searchRes == nil {
 		return nil, fmt.Errorf("Milvus 检索结果为空")
 	}
-	ret := make([]*biz.SearchResult, len(searchRes.Scores))
+	ret := make([]*biz.SearchResult, searchRes.Len())
 	var err error
-	for i := 0; i < len(searchRes.Scores); i++ {
+	for i := 0; i < searchRes.Len(); i++ {
 		ret[i] = &biz.SearchResult{Chunk: &biz.Chunk{}}
+		idColumn := searchRes.GetColumn("id")
+		if idColumn == nil {
+			idColumn = searchRes.IDs
+		}
+		documentIDColumn := searchRes.GetColumn("document_id")
 		searchFilePathColumn := searchRes.GetColumn("source_file_path")
 		chunkHashColumn := searchRes.GetColumn("chunk_hash")
 		chunkIndexColumn := searchRes.GetColumn("chunk_index")
@@ -182,6 +260,9 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 		updatedTimeColumn := searchRes.GetColumn("updated_at")
 		runeStartOffsetColumn := searchRes.GetColumn("rune_start_offset")
 		runeEndOffsetColumn := searchRes.GetColumn("rune_end_offset")
+		if idColumn == nil || documentIDColumn == nil {
+			return nil, fmt.Errorf("字段 id 或 document_id 为 nil")
+		}
 		if searchFilePathColumn == nil {
 			return nil, fmt.Errorf("字段 source_file_path 为 nil")
 		}
@@ -205,6 +286,14 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 		}
 		if runeEndOffsetColumn == nil {
 			return nil, fmt.Errorf("字段 rune_end_offset 为 nil")
+		}
+		ret[i].Chunk.Id, err = idColumn.GetAsInt64(i)
+		if err != nil {
+			return nil, formatColumnParseError(idColumn, err)
+		}
+		ret[i].Chunk.DocumentId, err = documentIDColumn.GetAsString(i)
+		if err != nil {
+			return nil, formatColumnParseError(documentIDColumn, err)
 		}
 		ret[i].Chunk.SourceFile, err = searchFilePathColumn.GetAsString(i)
 		if err != nil {
@@ -245,7 +334,9 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 		if err != nil {
 			return nil, formatColumnParseError(runeEndOffsetColumn, err)
 		}
-		ret[i].Score = float64(searchRes.Scores[i])
+		if len(searchRes.Scores) > i {
+			ret[i].Score = float64(searchRes.Scores[i])
+		}
 	}
 	return ret, nil
 }
@@ -256,4 +347,12 @@ func parseSearchResToRagChunk(searchRes *milvusclient.ResultSet) ([]*biz.SearchR
 // 示例: `formatColumnParseError(column, err)`。
 func formatColumnParseError(column column.Column, err error) error {
 	return fmt.Errorf("获取字段 %s 出错: %v", column.Name(), err)
+}
+
+// getOutputFields 列出解析 Milvus chunk 记录所需的标量字段。
+// 输入: 无。
+// 输出: 返回 Query iterator 和 Search 共用的输出列名, 不包含向量和分数。
+// 示例: `option.WithOutputFields(getOutputFields()...)`。
+func getOutputFields() []string {
+	return []string{"id", "document_id", "source_file_path", "content", "chunk_index", "chunk_hash", "created_at", "updated_at", "rune_start_offset", "rune_end_offset"}
 }
