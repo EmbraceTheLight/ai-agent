@@ -1,0 +1,9 @@
+/bin/
+/.cache/
+/.tmp/
+.env
+.env.*
+!.env.example
+*.test
+coverage.out
+/.trilium-state/
