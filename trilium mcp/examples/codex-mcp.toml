@@ -1,0 +1,4 @@
+# 合并到 Codex 配置，保留已有内容；不要重复添加同名表。
+[mcp_servers.trilium]
+command = 'D:\code\trilium mcp\bin\trilium-mcp.exe'
+args = ['-env-file', 'D:\code\trilium mcp\.env']
