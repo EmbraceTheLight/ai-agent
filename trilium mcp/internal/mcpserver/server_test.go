@@ -17,11 +17,11 @@ import (
 
 // memoryAPI 模拟 ETAPI 的笔记和正文，保留真实写入业务层用于协议集成测试。
 type memoryAPI struct {
-	mu                sync.Mutex
-	notes             map[string]trilium.Note
-	bodies            map[string]string
-	writes, bodyReads int
-	lastSearch        trilium.SearchOptions
+	mu                         sync.Mutex
+	notes                      map[string]trilium.Note
+	bodies                     map[string]string
+	writes, deletes, bodyReads int
+	lastSearch                 trilium.SearchOptions
 }
 
 // fixture 提供范围内笔记、越界笔记及受保护笔记。
@@ -91,6 +91,16 @@ func (a *memoryAPI) SetNoteContent(_ context.Context, id, body string) error {
 	return nil
 }
 
+// DeleteNote 模拟 ETAPI 的软删除结果。
+func (a *memoryAPI) DeleteNote(_ context.Context, id string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.deletes++
+	delete(a.notes, id)
+	delete(a.bodies, id)
+	return nil
+}
+
 // connect 通过官方 SDK 完成真实的内存传输握手，而不是直接调用处理函数。
 func connect(t *testing.T, api API, write bool) *mcp.ClientSession {
 	t.Helper()
@@ -152,15 +162,15 @@ func TestToolsAndWrites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(list.Tools) != 7 {
+	if len(list.Tools) != 8 {
 		t.Fatalf("tools=%d", len(list.Tools))
 	}
 	for _, tool := range list.Tools {
 		if tool.InputSchema == nil || tool.OutputSchema == nil || tool.Annotations == nil {
 			t.Fatalf("missing schemas/annotations: %s", tool.Name)
 		}
-		if tool.Name == "trilium_update" && (tool.Annotations.ReadOnlyHint || !*tool.Annotations.DestructiveHint) {
-			t.Fatal("update annotation")
+		if (tool.Name == "trilium_update" || tool.Name == "trilium_delete") && (tool.Annotations.ReadOnlyHint || !*tool.Annotations.DestructiveHint) {
+			t.Fatalf("destructive annotation: %s", tool.Name)
 		}
 	}
 	var info InfoOutput
@@ -219,6 +229,17 @@ func TestToolsAndWrites(t *testing.T) {
 	if api.bodies[id] != "<p>替换</p>" {
 		t.Fatal(api.bodies[id])
 	}
+	call(t, cs, "trilium_read", map[string]any{"noteId": id}, &read)
+	deleteArgs := map[string]any{"operationId": "mcp-delete", "noteId": id, "expectedSHA256": read.ContentSHA256}
+	var deleted notes.DeleteResult
+	call(t, cs, "trilium_delete", deleteArgs, &deleted)
+	if !deleted.Deleted || deleted.AlreadyApplied || api.deletes != 1 {
+		t.Fatal(deleted, api.deletes)
+	}
+	call(t, cs, "trilium_delete", deleteArgs, &deleted)
+	if !deleted.Deleted || !deleted.AlreadyApplied || api.deletes != 1 {
+		t.Fatal(deleted, api.deletes)
+	}
 }
 
 // TestToolFailures 验证 schema、越界和冲突错误不会执行写入，且受保护正文不会下载。
@@ -233,6 +254,8 @@ func TestToolFailures(t *testing.T) {
 		{"trilium_update", map[string]any{"operationId": "root-update", "noteId": "temp", "content": "x", "expectedSHA256": notes.ContentSHA256("<p>原文</p>")}},
 		{"trilium_update", map[string]any{"operationId": "stale", "noteId": "note123", "content": "x", "expectedSHA256": strings.Repeat("0", 64)}},
 		{"trilium_append", map[string]any{"operationId": "missing-hash", "noteId": "note123", "content": "x"}},
+		{"trilium_delete", map[string]any{"operationId": "delete-missing-hash", "noteId": "note123"}},
+		{"trilium_delete", map[string]any{"operationId": "delete-parent", "noteId": "temp", "expectedSHA256": notes.ContentSHA256("scope root")}},
 		{"trilium_read", map[string]any{"noteId": "locked"}},
 		{"trilium_list_children", map[string]any{"noteId": "locked"}},
 		{"trilium_list_children", map[string]any{"noteId": "temp", "offset": -1}},
@@ -250,8 +273,8 @@ func TestToolFailures(t *testing.T) {
 			}
 		})
 	}
-	if api.writes != 0 {
-		t.Fatalf("writes=%d", api.writes)
+	if api.writes != 0 || api.deletes != 0 {
+		t.Fatalf("writes=%d deletes=%d", api.writes, api.deletes)
 	}
 }
 

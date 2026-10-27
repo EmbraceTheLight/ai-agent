@@ -22,16 +22,7 @@ type writeOptions struct {
 // 输出：成功时返回操作结果；范围未配置、文件无效或业务校验失败时返回错误。
 // 默认状态目录位于配置文件旁，避免从其他目录启动时丢失重试记录；目录中保存私有快照。
 func executeWrite(ctx context.Context, client *trilium.Client, lookup func(string) string, envFile, command, noteID string, options writeOptions) (notes.Result, error) {
-	root := lookup("TRILIUM_WRITE_ROOT_ID")
-	stateDir := lookup("TRILIUM_STATE_DIR")
-	if stateDir == "" {
-		configPath, err := filepath.Abs(envFile)
-		if err != nil {
-			return notes.Result{}, errors.New("cannot resolve write-state directory")
-		}
-		stateDir = filepath.Join(filepath.Dir(configPath), ".trilium-state")
-	}
-	service, err := notes.NewService(client, root, stateDir, lookup("TRILIUM_URL"))
+	service, err := newWriteService(client, lookup, envFile)
 	if err != nil {
 		return notes.Result{}, err
 	}
@@ -45,7 +36,7 @@ func executeWrite(ctx context.Context, client *trilium.Client, lookup func(strin
 	if command == "create" {
 		parent := options.parent
 		if parent == "" {
-			parent = root
+			parent = lookup("TRILIUM_WRITE_ROOT_ID")
 		}
 		return service.Create(ctx, notes.CreateInput{OperationID: options.operation, ParentNoteID: parent, Title: options.title, Content: string(body), Format: options.format})
 	}
@@ -64,6 +55,34 @@ func executeWrite(ctx context.Context, client *trilium.Client, lookup func(strin
 		return service.Update(ctx, notes.UpdateInput{OperationID: options.operation, NoteID: noteID, Content: string(body), Format: options.format, ExpectedSHA256: options.expected, Match: match})
 	}
 	return service.Append(ctx, notes.AppendInput{OperationID: options.operation, NoteID: noteID, Content: string(body), Format: options.format, ExpectedSHA256: options.expected})
+}
+
+func newWriteService(client *trilium.Client, lookup func(string) string, envFile string) (*notes.Service, error) {
+	root := lookup("TRILIUM_WRITE_ROOT_ID")
+	stateDir := lookup("TRILIUM_STATE_DIR")
+	if stateDir == "" {
+		configPath, err := filepath.Abs(envFile)
+		if err != nil {
+			return nil, errors.New("cannot resolve write-state directory")
+		}
+		stateDir = filepath.Join(filepath.Dir(configPath), ".trilium-state")
+	}
+	service, err := notes.NewService(client, root, stateDir, lookup("TRILIUM_URL"))
+	if err != nil {
+		return nil, err
+	}
+	return service, nil
+}
+
+func executeDelete(ctx context.Context, client *trilium.Client, lookup func(string) string, envFile, noteID string, options writeOptions) (notes.DeleteResult, error) {
+	service, err := newWriteService(client, lookup, envFile)
+	if err != nil {
+		return notes.DeleteResult{}, err
+	}
+	if options.operation == "" || options.expected == "" {
+		return notes.DeleteResult{}, errors.New("delete requires -operation and -expected-sha256")
+	}
+	return service.Delete(ctx, notes.DeleteInput{OperationID: options.operation, NoteID: noteID, ExpectedSHA256: options.expected})
 }
 
 // readContentFile 读取有大小限制的 UTF-8 正文或匹配片段文件，不输出文件内容。

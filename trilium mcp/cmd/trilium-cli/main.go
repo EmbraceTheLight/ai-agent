@@ -1,4 +1,4 @@
-// Command trilium-cli 通过 Trilium ETAPI 查询笔记，并在指定子树内创建、追加或更新正文。
+// Command trilium-cli 通过 Trilium ETAPI 查询笔记，并在指定子树内创建、修改或删除笔记。
 package main
 
 import (
@@ -24,11 +24,12 @@ const usage = `Usage:
   trilium-cli create [-env-file PATH] [-parent NOTE_ID] -title TITLE -file PATH -operation ID [-format markdown]
   trilium-cli append [-env-file PATH] -file PATH -operation ID -expected-sha256 HASH [-format markdown] NOTE_ID
   trilium-cli update [-env-file PATH] -file PATH [-match-file PATH] -operation ID -expected-sha256 HASH [-format html] NOTE_ID
+  trilium-cli delete [-env-file PATH] -operation ID -expected-sha256 HASH NOTE_ID
 
 Configuration (non-empty environment values override the env file):
   TRILIUM_URL     Instance URL, optionally ending in /etapi (required).
   TRILIUM_TOKEN   ETAPI token (required; never passed on the command line).
-  TRILIUM_WRITE_ROOT_ID   Writable subtree root (required for create/append/update).
+  TRILIUM_WRITE_ROOT_ID   Writable subtree root (required for create/append/update/delete).
   TRILIUM_STATE_DIR       Local snapshots and operation records (default: beside env file).
 
 Loads .env from the current working directory, if present.
@@ -60,7 +61,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, getenv func(
 		return err
 	}
 	command := args[0]
-	if command != "info" && command != "search" && command != "read" && command != "create" && command != "append" && command != "update" {
+	if command != "info" && command != "search" && command != "read" && command != "create" && command != "append" && command != "update" && command != "delete" {
 		return errors.New("unknown command; use --help")
 	}
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
@@ -92,6 +93,10 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, getenv func(
 			flags.StringVar(&write.expected, "expected-sha256", "", "contentSHA256 returned by read")
 		}
 	}
+	if command == "delete" {
+		flags.StringVar(&write.operation, "operation", "", "stable unique operation ID")
+		flags.StringVar(&write.expected, "expected-sha256", "", "contentSHA256 returned by read")
+	}
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -119,6 +124,8 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, getenv func(
 	switch command {
 	case "create", "append", "update":
 		result, err = executeWrite(ctx, client, lookup, *envFile, command, flags.Arg(0), write)
+	case "delete":
+		result, err = executeDelete(ctx, client, lookup, *envFile, flags.Arg(0), write)
 	case "info":
 		result, err = client.GetAppInfo(ctx)
 	case "search":

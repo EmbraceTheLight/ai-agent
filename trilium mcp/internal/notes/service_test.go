@@ -16,8 +16,9 @@ import (
 // memoryAPI 模拟已提交但响应丢失、并发编辑及服务端改写，避免用真实笔记验证失败场景。
 type memoryAPI struct {
 	notes                                               map[string]snapshot
-	creates, puts, contentReads                         int
+	creates, puts, deletes, contentReads                int
 	failCreateAfterCommit, failPutAfterCommit, alterPut bool
+	failDeleteAfterCommit                               bool
 	failPutBeforeCommit                                 bool
 	beforeRead                                          func(int)
 }
@@ -69,6 +70,16 @@ func (m *memoryAPI) SetNoteContent(_ context.Context, id, content string) error 
 	m.notes[id] = note
 	if m.failPutAfterCommit {
 		return errors.New("simulated lost append response")
+	}
+	return nil
+}
+
+// DeleteNote 模拟 ETAPI 软删除，并支持删除后响应丢失的恢复场景。
+func (m *memoryAPI) DeleteNote(_ context.Context, id string) error {
+	m.deletes++
+	delete(m.notes, id)
+	if m.failDeleteAfterCommit {
+		return errors.New("simulated lost delete response")
 	}
 	return nil
 }
@@ -150,6 +161,104 @@ func TestAppendPreservesOriginalAndBacksUp(t *testing.T) {
 	again, err := s.Append(context.Background(), input)
 	if err != nil || !again.AlreadyApplied || api.puts != 1 || first.ContentSHA256 != again.ContentSHA256 {
 		t.Fatalf("append replay failed: %+v, %v", again, err)
+	}
+}
+
+// TestDeleteLeafAndReplay 验证叶子删除前保存快照，重试返回已应用且不再次删除。
+func TestDeleteLeafAndReplay(t *testing.T) {
+	s, api := testService(t)
+	before := api.notes["note123"]
+	input := DeleteInput{OperationID: "delete-leaf", NoteID: "note123", ExpectedSHA256: ContentSHA256(before.Content)}
+	first, err := s.Delete(context.Background(), input)
+	if err != nil || !first.Deleted || first.AlreadyApplied || api.deletes != 1 {
+		t.Fatalf("delete failed: %+v, %v", first, err)
+	}
+	if _, exists := api.notes[input.NoteID]; exists {
+		t.Fatal("note still exists after delete")
+	}
+	body, err := os.ReadFile(s.recordPath(input.OperationID, ".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var op deleteIntent
+	if err := json.Unmarshal(body, &op); err != nil || op.Before == nil || op.Before.Content != before.Content || op.Before.Note.Title != before.Note.Title {
+		t.Fatal("delete intent did not preserve the original note snapshot")
+	}
+	again, err := s.Delete(context.Background(), input)
+	if err != nil || !again.Deleted || !again.AlreadyApplied || api.deletes != 1 {
+		t.Fatalf("delete replay failed: %+v, %v", again, err)
+	}
+}
+
+// TestDeleteRecoversLostResponse 验证删除已提交但响应丢失时，重试确认缺失并完成记录。
+func TestDeleteRecoversLostResponse(t *testing.T) {
+	s, api := testService(t)
+	api.failDeleteAfterCommit = true
+	input := DeleteInput{OperationID: "lost-delete", NoteID: "note123", ExpectedSHA256: ContentSHA256(api.notes["note123"].Content)}
+	if _, err := s.Delete(context.Background(), input); err == nil {
+		t.Fatal("expected simulated response loss")
+	}
+	api.failDeleteAfterCommit = false
+	result, err := s.Delete(context.Background(), input)
+	if err != nil || !result.Deleted || !result.AlreadyApplied || api.deletes != 1 {
+		t.Fatalf("delete recovery failed: %+v, %v", result, err)
+	}
+}
+
+// TestDeleteRejectsUnsafeTargets 验证越界、克隆、非叶子、受保护和过期目标均不会删除。
+func TestDeleteRejectsUnsafeTargets(t *testing.T) {
+	for _, mode := range []string{"outside", "clone", "child", "protected", "unsupported", "stale", "scope-root"} {
+		t.Run(mode, func(t *testing.T) {
+			s, api := testService(t)
+			note := api.notes["note123"]
+			expected := ContentSHA256(note.Content)
+			switch mode {
+			case "outside":
+				note.Note.ParentNoteIDs = []string{"root"}
+				api.notes["note123"] = note
+			case "clone":
+				note.Note.ParentNoteIDs = []string{"temp", "temp"}
+				api.notes["note123"] = note
+			case "child":
+				note.Note.ChildNoteIDs = []string{"child1"}
+				api.notes["note123"] = note
+			case "protected":
+				note.Note.IsProtected = true
+				api.notes["note123"] = note
+			case "unsupported":
+				note.Note.Type = "image"
+				api.notes["note123"] = note
+			case "stale":
+				expected = ContentSHA256("older body")
+			case "scope-root":
+				noteID := "temp"
+				expected = ContentSHA256(api.notes[noteID].Content)
+			}
+			noteID := "note123"
+			if mode == "scope-root" {
+				noteID = "temp"
+			}
+			_, err := s.Delete(context.Background(), DeleteInput{OperationID: mode, NoteID: noteID, ExpectedSHA256: expected})
+			if err == nil || api.deletes != 0 {
+				t.Fatal("unsafe delete target was accepted")
+			}
+		})
+	}
+}
+
+// TestDeleteStopsWhenTargetChangesAfterSnapshot 验证持久化快照后发生编辑时不会继续删除。
+func TestDeleteStopsWhenTargetChangesAfterSnapshot(t *testing.T) {
+	s, api := testService(t)
+	api.beforeRead = func(count int) {
+		if count == 2 {
+			note := api.notes["note123"]
+			note.Content = "concurrent edit"
+			api.notes["note123"] = note
+		}
+	}
+	input := DeleteInput{OperationID: "delete-race", NoteID: "note123", ExpectedSHA256: ContentSHA256(api.notes["note123"].Content)}
+	if _, err := s.Delete(context.Background(), input); err == nil || api.deletes != 0 {
+		t.Fatal("delete ignored an edit made after its snapshot")
 	}
 }
 

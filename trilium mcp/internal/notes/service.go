@@ -29,6 +29,7 @@ type API interface {
 	GetNoteContent(context.Context, string) (string, error)
 	CreateNote(context.Context, trilium.CreateNoteInput) error
 	SetNoteContent(context.Context, string, string) error
+	DeleteNote(context.Context, string) error
 }
 
 // Service 将写入限制在 rootID 下，使用 stateDir 保存操作记录和修改前快照。
