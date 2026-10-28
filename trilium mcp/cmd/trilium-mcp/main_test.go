@@ -82,7 +82,7 @@ func TestStdioProcess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(list.Tools) != 7 {
+	if len(list.Tools) != 8 {
 		t.Fatal(len(list.Tools))
 	}
 	result, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "trilium_info", Arguments: map[string]any{}})

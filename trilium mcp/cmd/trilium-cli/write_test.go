@@ -20,7 +20,7 @@ import (
 func TestCLIWriteRoundTrip(t *testing.T) {
 	metadata := map[string]trilium.Note{"temp": {NoteID: "temp", Title: "temp", Type: "text", MIME: "text/html", ParentNoteIDs: []string{"root"}}}
 	bodies := map[string]string{"temp": "scope root"}
-	creates, puts := 0, 0
+	creates, puts, deletes := 0, 0, 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "test-token" {
 			t.Error("missing token")
@@ -59,6 +59,13 @@ func TestCLIWriteRoundTrip(t *testing.T) {
 			puts++
 			body, _ := io.ReadAll(r.Body)
 			bodies[id] = string(body)
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method == http.MethodDelete && path == id {
+			deletes++
+			delete(metadata, id)
+			delete(bodies, id)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -168,6 +175,30 @@ func TestCLIWriteRoundTrip(t *testing.T) {
 	}
 	if puts != 3 || bodies[created.NoteID] != replacement || metadata[created.NoteID].Title != "CLI test" {
 		t.Fatal("default HTML update did not replace the body exactly")
+	}
+	finalReadJSON, err := invoke("read", created.NoteID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var finalRead struct {
+		ContentSHA256 string `json:"contentSHA256"`
+	}
+	if err := json.Unmarshal(finalReadJSON, &finalRead); err != nil {
+		t.Fatal(err)
+	}
+	var deleted notes.DeleteResult
+	deleteArgs := []string{"delete", "-operation", "cli-delete", "-expected-sha256", finalRead.ContentSHA256, created.NoteID}
+	for i := 0; i < 2; i++ {
+		body, err := invoke(deleteArgs...)
+		if err != nil || json.Unmarshal(body, &deleted) != nil {
+			t.Fatalf("delete command failed: %v", err)
+		}
+	}
+	if deletes != 1 || !deleted.Deleted || !deleted.AlreadyApplied {
+		t.Fatalf("delete replay was not idempotent: %+v, deletes=%d", deleted, deletes)
+	}
+	if _, exists := metadata[created.NoteID]; exists {
+		t.Fatal("deleted note remains in the fake ETAPI tree")
 	}
 }
 

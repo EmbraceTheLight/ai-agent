@@ -2,7 +2,7 @@
 
 以 TriliumNext 0.104.1 为初始目标，通过官方 ETAPI 操作笔记，再把这些能力提供给 AI Agent。
 
-当前已提供 ETAPI 客户端、CLI 和 stdio MCP 服务，支持指定子树内的新建、追加和正文更新。已与本机 TriliumNext 0.104.1 完成真实 MCP 读写验证；Codex 桌面端接入见 [MCP 使用说明](docs/mcp-guide.md)，功能边界及验证范围见 `docs/write-guide.md`、`docs/verification.md`。
+当前已提供 ETAPI 客户端、CLI 和 stdio MCP 服务，支持指定子树内的新建、追加、正文更新及叶子笔记软删除。新建和修改已与本机 TriliumNext 0.104.1 完成真实 MCP 联调；删除能力通过模拟 ETAPI 验证，未对真实笔记执行删除。Codex 桌面端接入见 [MCP 使用说明](docs/mcp-guide.md)，功能边界及验证范围见 `docs/write-guide.md`、`docs/verification.md`。
 
 ## 当前能力
 
@@ -14,8 +14,10 @@
 | `create` | 在指定子树中新建富文本笔记 | `POST /etapi/create-note`，随后读取核对 |
 | `append` | 备份后追加内容并核对结果 | `PUT /etapi/notes/{id}/content`，随后读取核对 |
 | `update` | 备份后替换整篇正文或唯一 HTML 片段 | `PUT /etapi/notes/{id}/content`，随后读取核对 |
+| `delete` | 快照后软删除一篇叶子笔记 | `DELETE /etapi/notes/{id}`，随后确认笔记不可读取 |
 
-- `info`、`search`、`read` 仅发送 GET；`create`、`append`、`update` 必须配置写入根，不能修改范围根本身的正文。当前不提供删除、重命名和移动。
+- `info`、`search`、`read` 仅发送 GET；所有写操作必须配置写入根。删除仅支持范围内未受保护、单父级、无子笔记的 `text` 或 `code` 笔记；不提供重命名、移动或批量删除。
+- ETAPI 按 note ID 删除会影响该笔记的所有分支；实现拒绝克隆笔记及有子笔记的笔记，以避免删除其他位置或整棵子树。
 - `read` 支持 UTF-8 的 `text`、`code` 笔记；富文本保留原始 HTML，不转换成 Markdown。
 - 不读取受保护笔记、图片或文件笔记，不下载附件。
 - 请求超时为 10 秒，单个响应上限为 8 MiB；超过上限会报错，不返回截断的正文。
@@ -108,6 +110,10 @@ go run ./cmd/trilium-cli search -ancestor root -limit 5 'Go #topic'
 # 将 note123 替换为搜索结果中的实际 noteId。
 go run ./cmd/trilium-cli read note123
 go run ./cmd/trilium-cli read -raw note123
+
+# 先读取叶子笔记及正文摘要，再软删除。
+$current = go run ./cmd/trilium-cli read note123 | ConvertFrom-Json
+go run ./cmd/trilium-cli delete -operation 'my-delete-001' -expected-sha256 $current.contentSHA256 note123
 ```
 
 选项必须写在查询字符串或笔记 ID 前面。默认输出格式化 JSON；`-raw` 仅输出原始正文，不增加换行、不执行其中的 HTML。
@@ -137,7 +143,7 @@ go build -o ./bin/trilium-cli.exe ./cmd/trilium-cli
 go build -o ./bin/trilium-mcp.exe ./cmd/trilium-mcp
 ```
 
-自动化测试使用假 Token、临时配置和模拟笔记树，不读取真实 `.env`，不依赖真实笔记库。除只读和配置场景外，还覆盖越界与跨范围克隆拒绝、原文备份、并发编辑检测、片段匹配缺失或歧义、保留其他富文本内容、写后核对及响应丢失后的恢复。
+自动化测试使用假 Token、临时配置和模拟笔记树，不读取真实 `.env`，不依赖真实笔记库。除只读和配置场景外，还覆盖越界与跨范围克隆拒绝、原文快照、并发编辑检测、叶子删除限制、写后核对及响应丢失后的恢复。
 
 编译后使用 `./bin/trilium-cli.exe`，不需要再次运行 `go run`。
 

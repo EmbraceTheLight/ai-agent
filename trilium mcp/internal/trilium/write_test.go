@@ -70,3 +70,30 @@ func TestWriteErrorsAreSanitizedAndNotRetried(t *testing.T) {
 		t.Fatalf("unexpected write failure: %v", err)
 	}
 }
+
+// TestDeleteNoteEndpoint 验证按 noteId 调用 DELETE，使用认证且接受 204 空响应。
+func TestDeleteNoteEndpoint(t *testing.T) {
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.Method != http.MethodDelete || r.URL.Path != "/etapi/notes/note123" || r.Header.Get("Authorization") != "test-token" {
+			t.Errorf("unexpected delete request: %s %s", r.Method, r.URL.Path)
+		}
+		body, _ := io.ReadAll(r.Body)
+		if len(body) != 0 || r.Header.Get("Content-Type") != "" {
+			t.Error("delete request unexpectedly carried a body")
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+	client := newTestClient(t, server.URL)
+	if err := client.DeleteNote(context.Background(), "note123"); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected one delete request, got %d", calls)
+	}
+	if err := client.DeleteNote(context.Background(), "../note"); err == nil || calls != 1 {
+		t.Fatal("invalid note ID was sent to ETAPI")
+	}
+}

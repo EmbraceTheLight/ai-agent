@@ -57,6 +57,16 @@ func (c *Client) SetNoteContent(ctx context.Context, noteID, content string) err
 	return c.write(ctx, http.MethodPut, "/notes/"+noteID+"/content", []byte(content), "text/plain; charset=utf-8", http.StatusNoContent)
 }
 
+// DeleteNote 对笔记 ID 执行 ETAPI 软删除；存在多个父级时会影响该笔记的所有分支。
+// 输入：ctx 控制请求；noteID 必须符合 ETAPI 的笔记 ID 格式。
+// 输出：服务器返回 204 时为 nil，否则返回错误；连接失败时结果未知，调用方应使用同一操作 ID 核对重试。
+func (c *Client) DeleteNote(ctx context.Context, noteID string) error {
+	if err := validateNoteID(noteID); err != nil {
+		return err
+	}
+	return c.write(ctx, http.MethodDelete, "/notes/"+noteID, nil, "", http.StatusNoContent)
+}
+
 // write 执行一次写请求并校验状态，沿用客户端的认证、时限及禁止重定向策略。
 // 输入：method、path 和 expected 由内部调用确定；body 为已编码正文；contentType 为接口要求的媒体类型。
 // 输出：状态符合预期时返回 nil，否则返回不含 Token 或响应正文的错误；不自动重发请求。
@@ -66,7 +76,9 @@ func (c *Client) write(ctx context.Context, method, path string, body []byte, co
 		return errors.New("cannot construct ETAPI write request")
 	}
 	req.Header.Set("Authorization", c.token)
-	req.Header.Set("Content-Type", contentType)
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("ETAPI %s %s: outcome unknown; verify with the same operation ID before retrying", method, path)

@@ -18,7 +18,7 @@ TRILIUM_WRITE_ROOT_ID=v2YidQTHkFIY
 
 `TRILIUM_WRITE_ROOT_ID` **只限制写入**。MCP 读取能力与 CLI 相同，范围由 ETAPI Token 决定；`trilium_search` 默认以写入根为祖先，但可显式指定其他祖先，`trilium_read` 和 `trilium_list_children` 不限制到写入根。受保护正文、图片和文件下载不受支持。若未来需要子树级读取隔离，需要增加独立的读取检查。
 
-不设置写入根时仅提供四个只读工具；配置了无效写入根时启动报错。更改 `.env` 后重启 MCP 进程才能生效。
+不设置写入根时仅提供四个只读工具；配置了无效写入根时启动报错。配置有效写入根后还会注册创建、追加、更新和删除工具。更改 `.env` 后重启 MCP 进程才能生效。
 
 ## 注册到 Codex
 
@@ -48,6 +48,7 @@ codex mcp get trilium
 | `trilium_create` | 在写入范围内新建富文本笔记 | `operationId`、`title`、`content`；父级默认写入根 |
 | `trilium_append` | 备份后追加 | `operationId`、`noteId`、`content`、`expectedSHA256` |
 | `trilium_update` | 整篇或唯一片段更新 | 追加同类参数；可选原始 HTML `match` |
+| `trilium_delete` | 快照后软删除叶子笔记 | `operationId`、`noteId`、`expectedSHA256` |
 
 新建和追加的 `format` 默认 `markdown`；更新默认 `html`，也支持显式指定 `markdown` 或 `text`。内容通过字符串参数传入，不提供让 AI 读取任意本机文件的工具。单次输入上限 4 MiB，读取正文上限 8 MiB；每个 HTTP 请求超时 10 秒，每次工具调用最长 60 秒。
 
@@ -63,13 +64,17 @@ codex mcp get trilium
 
 ## 写入约束与恢复
 
-写入沿用子树检查、跨边界克隆拒绝、修改前完整快照、SHA-256 冲突检查和写后核对。不能编辑写入根自身正文，不提供删除、移动或重命名。
+写入沿用子树检查、跨边界克隆拒绝、修改前完整快照、SHA-256 冲突检查和写后核对。不能编辑或删除写入根自身。删除仅支持未受保护、单父级、没有子笔记的 `text` 或 `code` 笔记；克隆笔记和非叶子笔记会被拒绝。
+
+ETAPI 的 `DELETE /etapi/notes/{noteId}` 删除该 note ID 的所有分支；如果笔记有子分支，服务端可能连带将其子树移入删除状态。工具因此只开放叶子笔记。删除是可恢复软删除，不会清除删除状态或附件数据。
 
 先 `trilium_read`，把返回的 `contentSHA256` 作为 `expectedSHA256`。每个新操作选择独立 `operationId`；若发生超时或连接中断，使用**相同操作 ID、相同参数、同一状态目录**重试。不要为同一次未知结果生成新 ID，否则无法识别重复意图。旧摘要冲突时重新读取，重新判断改动，并为新的意图使用新 ID。
 
+删除同样需要最新的正文摘要。服务会保存元数据和正文快照，删除后确认目标不可读取；响应丢失后使用同一操作 ID 重试。快照用于留存和人工恢复参考，不是自动还原功能。Trilium 提供 `POST /etapi/notes/{noteId}/undelete` 恢复接口，恢复要求存在未删除的父级。
+
 CLI 和 MCP 默认共享 `.env` 所在目录下的 `.trilium-state`。该目录保存私有原文和操作记录，不要提交或随意删除。相同 ID 的已完成操作返回历史结果，`alreadyApplied=true`；它不代表笔记此后没有被其他人修改，需要当前内容时再次读取。
 
-整篇更新会替换完整正文；局部修改优先提供唯一原始 HTML `match`，保留其他链接与附件引用。ETAPI 的检查和 PUT 不是原子操作，同时人工编辑仍可能产生竞争；错误与恢复细节见 `write-guide.md`。
+整篇更新会替换完整正文；局部修改优先提供唯一原始 HTML `match`，保留其他链接与附件引用。ETAPI 的检查和 PUT/DELETE 不是原子操作，同时人工编辑或树结构变化仍可能产生竞争；错误与恢复细节见 `write-guide.md`。
 
 ## 排查与学习
 
