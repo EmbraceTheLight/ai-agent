@@ -35,9 +35,6 @@ func executeWrite(ctx context.Context, client *trilium.Client, lookup func(strin
 	}
 	if command == "create" {
 		parent := options.parent
-		if parent == "" {
-			parent = lookup("TRILIUM_WRITE_ROOT_ID")
-		}
 		return service.Create(ctx, notes.CreateInput{OperationID: options.operation, ParentNoteID: parent, Title: options.title, Content: string(body), Format: options.format})
 	}
 	if command == "update" {

@@ -30,7 +30,7 @@ type completion struct {
 	Result      Result `json:"result"`
 }
 
-// acquireLock 使用独占文件串行化同一状态目录的写操作。
+// acquireLock 保留旧版全局锁的构造方式，用于验证升级期间遇到旧锁时拒绝写入。
 // 输入：dir 为操作记录目录，必要时创建。
 // 输出：成功时返回释放函数；已有锁或无法创建目录时返回错误；不自动移除崩溃遗留的锁。
 func acquireLock(dir string) (func(), error) {

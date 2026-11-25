@@ -29,7 +29,7 @@ const usage = `Usage:
 Configuration (non-empty environment values override the env file):
   TRILIUM_URL     Instance URL, optionally ending in /etapi (required).
   TRILIUM_TOKEN   ETAPI token (required; never passed on the command line).
-  TRILIUM_WRITE_ROOT_ID   Writable subtree root (required for create/append/update/delete).
+  TRILIUM_WRITE_ROOT_ID   One note ID or a JSON array of IDs (required for writes; root forbidden).
   TRILIUM_STATE_DIR       Local snapshots and operation records (default: beside env file).
 
 Loads .env from the current working directory, if present.

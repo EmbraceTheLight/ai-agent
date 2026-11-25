@@ -63,10 +63,10 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (Result, error)
 // 输出：已完成操作返回历史结果；待核对操作先检查当前内容，只有仍为原文时才尝试写入。
 // 保持原有操作指纹结构和记录文件格式；检查与 PUT 之间仍有非原子的并发窗口。
 func (s *Service) changeContent(ctx context.Context, change contentChange) (Result, error) {
-	if !idPattern.MatchString(change.NoteID) || change.NoteID == s.rootID || !hashPattern.MatchString(change.ExpectedSHA256) {
+	if !idPattern.MatchString(change.NoteID) || s.isScopeRoot(change.NoteID) || !hashPattern.MatchString(change.ExpectedSHA256) {
 		return Result{}, fmt.Errorf("%s requires a child note ID and its expected SHA-256; the scope root cannot be edited", change.Kind)
 	}
-	unlock, err := acquireLock(s.stateDir)
+	unlock, err := s.lockOperation(ctx, change.OperationID)
 	if err != nil {
 		return Result{}, err
 	}
@@ -78,6 +78,11 @@ func (s *Service) changeContent(ctx context.Context, change contentChange) (Resu
 	if previous != nil {
 		return *previous, nil
 	}
+	unlockTarget, err := s.lockTarget(ctx, change.NoteID)
+	if err != nil {
+		return Result{}, err
+	}
+	defer unlockTarget()
 	before, err := s.readWritable(ctx, change.NoteID)
 	if err != nil {
 		return Result{}, err

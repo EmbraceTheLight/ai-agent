@@ -1,8 +1,11 @@
 {
   "mcpServers": {
     "trilium": {
-      "command": "D:\\code\\trilium mcp\\bin\\trilium-mcp.exe",
-      "args": ["-env-file", "D:\\code\\trilium mcp\\.env"]
+      "command": "D:\\code\\ai-agent\\trilium mcp\\bin\\trilium-mcp-note-locks.exe",
+      "args": [
+        "-env-file",
+        "D:\\code\\ai-agent\\trilium mcp\\.env"
+      ]
     }
   }
 }

@@ -108,6 +108,12 @@ func connect(t *testing.T, api API, write bool) *mcp.ClientSession {
 	if write {
 		options = Options{WriteRootID: "temp", StateDir: t.TempDir(), Instance: "test-instance"}
 	}
+	return connectOptions(t, api, options)
+}
+
+// connectOptions 使用指定配置建立内存协议会话，供多目录场景复用。
+func connectOptions(t *testing.T, api API, options Options) *mcp.ClientSession {
+	t.Helper()
 	server, err := New(api, options)
 	if err != nil {
 		t.Fatal(err)

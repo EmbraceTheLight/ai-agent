@@ -16,16 +16,50 @@ TRILIUM_WRITE_ROOT_ID=v2YidQTHkFIY
 
 这些值只是格式示例；真实 Token 继续保留在被忽略的 `.env`。非空环境变量仍优先于文件；若 Codex 进程继承过旧的 `TRILIUM_*` 环境变量，应清理旧值后重启。
 
-`TRILIUM_WRITE_ROOT_ID` **只限制写入**。MCP 读取能力与 CLI 相同，范围由 ETAPI Token 决定；`trilium_search` 默认以写入根为祖先，但可显式指定其他祖先，`trilium_read` 和 `trilium_list_children` 不限制到写入根。受保护正文、图片和文件下载不受支持。若未来需要子树级读取隔离，需要增加独立的读取检查。
+`TRILIUM_WRITE_ROOT_ID` **只限制写入**。MCP 读取能力与 CLI 相同，范围由 ETAPI Token 决定。配置只有一个目录时，`trilium_search` 默认以它为祖先；有多个目录时必须显式提供 `ancestorNoteId`，不因省略参数而扩大搜索范围。`trilium_read` 和 `trilium_list_children` 不限制到写入根。受保护正文、图片和文件下载不受支持。
 
 不设置写入根时仅提供四个只读工具；配置了无效写入根时启动报错。配置有效写入根后还会注册创建、追加、更新和删除工具。更改 `.env` 后重启 MCP 进程才能生效。
+
+## 多目录与笔记锁（0.3.0）
+
+原有单 ID 写法继续有效，也可以使用 JSON 数组：
+
+```dotenv
+TRILIUM_WRITE_ROOT_ID='["directoryA","directoryB","directoryC"]'
+```
+
+程序只排序、去重，不合并嵌套关系。即使 B、C 位于 A 之下，三项仍全部保留。目录列表仅控制允许的写入范围，不用于选择锁；数组必须包含 1–64 个合法 noteId，仍禁止配置全库根 `root`。
+
+`trilium_info` 返回 `writeRootIds`。兼容字段 `configuredWriteRootIds` 与它相同；只有去重后仅剩一个目录时，旧字段 `writeRootId` 才有值，否则为空。info 不再遍历目录祖先或验证配置 ID 是否存在；实际写入取得锁后，会检查目标的保护状态、类型和全部父级路径，写入前再次核对正文和权限。读取范围仍由 ETAPI Token 决定。
+
+只有一个目录时，新建默认以它为父级；多个目录（包括嵌套目录）时，MCP 必须显式提供 `parentNoteId`，CLI 必须提供 `-parent`。多目录 MCP 搜索必须提供 `ancestorNoteId`。所有显式配置的根笔记自身都禁止修改正文和删除；若希望编辑 B 本身，可仅配置其祖先 A。
+
+| 操作 | 笔记锁对象 |
+| --- | --- |
+| 更新、追加笔记 X | X 的 noteId |
+| 删除叶子笔记 X | X 的 noteId |
+| 在 P 下新建子笔记 | P 的 noteId |
+
+每次操作先取得 operationId 锁，再取得上表对应的笔记锁；同一状态目录的操作 ID 必须全局唯一。不同笔记即使在同一目录也可以并行，同一笔记的竞争会等待；同一父笔记下的新建也会串行。克隆笔记共享同一个 noteId，因此自然互斥，无需锁多个目录。范围外克隆路径仍拒绝，删除仍拒绝克隆和非叶子笔记。
+
+创建子笔记时锁父笔记，确保它与删除该父笔记竞争同一把锁：先创建成功则父笔记不再是叶子，删除被拒绝；先删除成功则后来的创建发现父笔记不存在，不会继续发送创建请求。锁等待可以取消，MCP 工具调用最长 60 秒，CLI 可按 Ctrl+C 取消。
+
+文件锁位于状态目录的 `.locks` 下，支持跨进程互斥，崩溃遗留锁不自动清除。协作进程必须共享同一个状态目录；请保持同一套写入配置，避免操作记录指纹不一致。升级前先完成待核对操作并停止旧写入进程，**不要混用 0.1.0 全局锁、0.2.0 目录锁和 0.3.0 笔记锁的写入程序**。旧 `.lock` 文件会阻止新写入；旧目录锁与新笔记锁之间没有互斥保证。
+
+单目录历史记录继续兼容；数组排序和重复项不影响指纹。0.2.0 曾将嵌套配置合并，因此保留同一嵌套数组升级到 0.3.0 后，指纹可能变化，已配置的后代边界也重新受到根节点保护。不要通过删除操作记录或盲目换操作 ID 绕过未知结果，先在旧版本及原配置下完成核对。
+
+这些锁不提供会话权限隔离，也不能约束人工编辑、其他状态目录或不使用此协议的客户端。ETAPI 的检查与写入仍不是原子操作，其他客户端仍可能在最后检查后改动笔记。
+
+本次另外构建 `bin/trilium-mcp-note-locks.exe` 和 `bin/trilium-cli-note-locks.exe`，避免替换运行中的程序。停止旧写入后，将 MCP 启动命令切换到新程序并重启；也可从更新后的源码重新构建原文件名。真实 `.env` 和 Codex 配置不会自动改写。
+
+验证记录见 [笔记锁验证](note-lock-verification.md)。0.2.0 的记录保留在 `multi-root-verification.md`，其中的目录合并和目录锁描述属于历史行为。
 
 ## 注册到 Codex
 
 在 PowerShell 中执行一次：
 
 ```powershell
-codex mcp add trilium -- 'D:\code\trilium mcp\bin\trilium-mcp.exe' -env-file 'D:\code\trilium mcp\.env'
+codex mcp add trilium -- 'D:\code\ai-agent\trilium mcp\bin\trilium-mcp-note-locks.exe' -env-file 'D:\code\ai-agent\trilium mcp\.env'
 codex mcp get trilium
 ```
 
