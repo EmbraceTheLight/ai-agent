@@ -32,11 +32,12 @@ type API interface {
 	DeleteNote(context.Context, string) error
 }
 
-// Service 将写入限制在 rootID 下，使用 stateDir 保存操作记录和修改前快照。
+// Service 将写入限制在 roots 的并集中，使用 stateDir 保存操作记录和修改前快照。
 // 同一实例必须使用同一状态目录，才能识别重试；该限制不替代 Trilium 本身的权限控制。
 type Service struct {
 	api                        API
 	rootID, stateDir, instance string
+	roots                      []string
 }
 
 // CreateInput 指定新笔记的父级、标题、内容格式及稳定的操作 ID。
@@ -67,19 +68,29 @@ type Result struct {
 }
 
 // NewService 创建具有明确写入边界的服务，不发起网络请求。
-// 输入：api 为 ETAPI 实现；rootID 为允许的子树根，不能是 root；stateDir 为备份目录；instance 为实例标识。
+// 输入：rootID 为单个 ID 或 JSON 数组，不能包含 root；stateDir 为备份目录；instance 为实例标识。
 // 输出：配置有效时返回服务，否则返回错误；只在实际写入时创建状态目录。
 func NewService(api API, rootID, stateDir, instance string) (*Service, error) {
-	if api == nil || !idPattern.MatchString(rootID) || rootID == "root" || strings.TrimSpace(stateDir) == "" || instance == "" {
+	roots, err := ParseWriteRoots(rootID)
+	if err != nil {
+		return nil, err
+	}
+	if api == nil || len(roots) == 0 || strings.TrimSpace(stateDir) == "" || instance == "" {
 		return nil, errors.New("writes require a non-root TRILIUM_WRITE_ROOT_ID, state directory and instance")
 	}
-	return &Service{api: api, rootID: rootID, stateDir: stateDir, instance: instance}, nil
+	return &Service{api: api, rootID: scopeKey(roots), roots: roots, stateDir: stateDir, instance: instance}, nil
 }
 
 // Create 在允许的子树中创建富文本笔记，预先记录固定笔记 ID 并读取核对结果。
 // 输入：ctx 控制请求；input.OperationID 在同一状态目录内必须稳定且唯一。
 // 输出：成功时返回 ID 和正文摘要；失败时保留操作记录，使用相同参数及操作 ID 重试可先查询已有结果。
 func (s *Service) Create(ctx context.Context, input CreateInput) (Result, error) {
+	if input.ParentNoteID == "" {
+		if len(s.roots) != 1 {
+			return Result{}, errors.New("multiple write roots require an explicit parentNoteId")
+		}
+		input.ParentNoteID = s.roots[0]
+	}
 	if !idPattern.MatchString(input.ParentNoteID) || strings.TrimSpace(input.Title) == "" || !utf8.ValidString(input.Title) {
 		return Result{}, errors.New("create requires a valid parent ID and nonempty title")
 	}
@@ -87,7 +98,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
-	unlock, err := acquireLock(s.stateDir)
+	unlock, err := s.lockOperation(ctx, input.OperationID)
 	if err != nil {
 		return Result{}, err
 	}
@@ -99,6 +110,11 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (Result, error)
 	if previous != nil {
 		return *previous, nil
 	}
+	unlockTarget, err := s.lockTarget(ctx, input.ParentNoteID)
+	if err != nil {
+		return Result{}, err
+	}
+	defer unlockTarget()
 	if err := s.requireScope(ctx, input.ParentNoteID); err != nil {
 		return Result{}, err
 	}
@@ -152,46 +168,6 @@ func (s *Service) Append(ctx context.Context, input AppendInput) (Result, error)
 		ExpectedSHA256: input.ExpectedSHA256, Input: input,
 		Build: func(original string) (string, error) { return original + "\n" + fragment, nil },
 	})
-}
-
-// requireScope 校验目标的所有父级路径均落在允许子树内，拒绝跨边界克隆、循环及受保护笔记。
-// 输入：noteID 可以是子树根或其后代；最多读取 256 个不同节点的元数据。
-// 输出：范围可确认时返回 nil；不能确认时拒绝写入，不下载正文。
-func (s *Service) requireScope(ctx context.Context, noteID string) error {
-	states := map[string]int{}
-	var visit func(string) error
-	visit = func(id string) error {
-		if states[id] == 1 {
-			return errors.New("cycle detected while checking write scope")
-		}
-		if states[id] == 2 {
-			return nil
-		}
-		if len(states) >= 256 {
-			return errors.New("write scope graph exceeds traversal limit")
-		}
-		states[id] = 1
-		note, err := s.api.GetNote(ctx, id)
-		if err != nil {
-			return err
-		}
-		if note.IsProtected {
-			return errors.New("protected notes are outside the writable scope")
-		}
-		if id != s.rootID {
-			if len(note.ParentNoteIDs) == 0 || id == "root" {
-				return errors.New("note is outside the configured write subtree")
-			}
-			for _, parent := range note.ParentNoteIDs {
-				if err := visit(parent); err != nil {
-					return err
-				}
-			}
-		}
-		states[id] = 2
-		return nil
-	}
-	return visit(noteID)
 }
 
 // readWritable 在范围检查后读取可修改的 HTML 笔记快照。

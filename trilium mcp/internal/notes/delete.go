@@ -40,10 +40,10 @@ type deleteCompletion struct {
 // 输出：目标确认不存在时返回删除结果；越界、克隆、子笔记或摘要冲突时停止。
 // 删除前保存元数据和正文快照；ETAPI 删除及范围检查不是服务器原子操作。
 func (s *Service) Delete(ctx context.Context, input DeleteInput) (DeleteResult, error) {
-	if !idPattern.MatchString(input.NoteID) || input.NoteID == "root" || input.NoteID == s.rootID || !hashPattern.MatchString(input.ExpectedSHA256) {
+	if !idPattern.MatchString(input.NoteID) || input.NoteID == "root" || s.isScopeRoot(input.NoteID) || !hashPattern.MatchString(input.ExpectedSHA256) {
 		return DeleteResult{}, errors.New("delete requires a writable leaf note ID and its expected SHA-256; the scope root cannot be deleted")
 	}
-	unlock, err := acquireLock(s.stateDir)
+	unlock, err := s.lockOperation(ctx, input.OperationID)
 	if err != nil {
 		return DeleteResult{}, err
 	}
@@ -60,6 +60,11 @@ func (s *Service) Delete(ctx context.Context, input DeleteInput) (DeleteResult, 
 	if previous != nil {
 		return *previous, nil
 	}
+	unlockTarget, err := s.lockTarget(ctx, input.NoteID)
+	if err != nil {
+		return DeleteResult{}, err
+	}
+	defer unlockTarget()
 	if !exists {
 		before, err := s.readDeletable(ctx, input.NoteID)
 		if err != nil {
@@ -85,7 +90,10 @@ func (s *Service) Delete(ctx context.Context, input DeleteInput) (DeleteResult, 
 
 	current, err := s.readDeletable(ctx, input.NoteID)
 	if isNotFound(err) {
-		return s.finishDelete(input.OperationID, op, true)
+		if _, verifyErr := s.api.GetNote(ctx, input.NoteID); isNotFound(verifyErr) {
+			return s.finishDelete(input.OperationID, op, true)
+		}
+		return DeleteResult{}, errors.New("delete scope could not be verified; target absence is not confirmed")
 	}
 	if err != nil {
 		return DeleteResult{}, err
